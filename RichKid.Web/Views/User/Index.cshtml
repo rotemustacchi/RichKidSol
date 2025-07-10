@@ -1,0 +1,113 @@
+@model List<RichKid.Web.Models.User>
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+@{
+    var group  = HttpContextAccessor.HttpContext.Session.GetInt32("UserGroupID") ?? 0;
+    var me     = HttpContextAccessor.HttpContext.Session.GetInt32("UserID")    ?? 0;
+    var status = Context.Request.Query["status"].ToString();
+    var search = Context.Request.Query["search"].ToString();
+}
+
+<h2>רשימת משתמשים</h2>
+
+<form method="get" class="mb-3">
+    <input type="text"
+           name="search"
+           placeholder="חיפוש לפי שם משתמש, אימייל או טלפון"
+           value="@search"
+           class="form-control d-inline-block w-auto" />
+
+    <select name="status" class="form-control d-inline-block w-auto">
+        <option value="">-- סטטוס --</option>
+
+        @* פעיל *@
+        @if (status == "active")
+        {
+            <option value="active" selected>פעיל</option>
+        }
+        else
+        {
+            <option value="active">פעיל</option>
+        }
+
+        @* לא פעיל *@
+        @if (status == "inactive")
+        {
+            <option value="inactive" selected>לא פעיל</option>
+        }
+        else
+        {
+            <option value="inactive">לא פעיל</option>
+        }
+    </select>
+
+    <button type="submit" class="btn btn-secondary">סנן</button>
+</form>
+
+@if (group == 1 || group == 2)
+{
+    <a asp-controller="User"
+       asp-action="Create"
+       class="btn btn-primary mb-3">
+        צור משתמש חדש
+    </a>
+}
+
+@if (!Model.Any())
+{
+    <p>אין משתמשים להצגה</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>שם משתמש</th>
+                <th>שם פרטי</th>
+                <th>שם משפחה</th>
+                <th>קבוצה</th>
+                <th>טלפון</th>
+                <th>אימייל</th>
+                <th>סטטוס</th>
+                <th>פעולות</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.UserName</td>
+                <td>@user.Data.FirstName</td>
+                <td>@user.Data.LastName</td>
+                <td>@RichKid.Web.Models.UserGroups.GetName(user.UserGroupID)</td>
+                <td>@user.Data.Phone</td>
+                <td>@user.Data.Email</td>
+                <td>@(user.Active ? "פעיל" : "לא פעיל")</td>
+                <td>
+                    @* עריכה *@
+                    @if (group == 1 || group == 2
+                        || ((group == 3 || group == 4) && user.UserID == me))
+                    {
+                        <a asp-controller="User"
+                           asp-action="Edit"
+                           asp-route-id="@user.UserID"
+                           class="btn btn-sm btn-secondary">
+                           ערוך
+                        </a>
+                    }
+                    @* מחיקה *@
+                    @if (group == 1)
+                    {
+                        <a asp-controller="User"
+                           asp-action="Delete"
+                           asp-route-id="@user.UserID"
+                           class="btn btn-sm btn-danger">
+                           מחק
+                        </a>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,17 @@
+@model RichKid.Web.Models.User
+
+<h2>מחיקת משתמש</h2>
+
+<p>האם אתה בטוח שברצונך למחוק את המשתמש הבא?</p>
+
+<ul>
+    <li><strong>שם משתמש:</strong> @Model.UserName</li>
+    <li><strong>שם מלא:</strong> @Model.Data.FirstName @Model.Data.LastName</li>
+</ul>
+
+<form asp-action="DeleteConfirmed" method="post">
+    <input type="hidden" asp-for="UserID" />
+    <button type="submit" class="btn btn-danger">מחק</button>
+    <a asp-action="Index" class="btn btn-secondary">ביטול</a>
+</form>
+

@@ -1,0 +1,50 @@
+@model RichKid.Web.Models.User
+
+<h2>עריכת משתמש</h2>
+
+<form asp-action="Edit" method="post">
+    <input asp-for="UserID" type="hidden" />
+
+    <label>שם משתמש:</label>
+    <input asp-for="UserName" required /><br />
+
+    <label>סיסמה:</label>
+    <input asp-for="Password" type="password" required /><br />
+
+    <label>פעיל:</label>
+    <input asp-for="Active" type="checkbox" /><br />
+
+    <label>קבוצת משתמש:</label>
+    <select asp-for="UserGroupID" class="form-control" style="width: 200px;">
+        <option value="">-- לא משויך --</option>
+        <option value="1">מנהל</option>
+        <option value="2">עורך</option>
+        <option value="3">משתמש רגיל</option>
+        <option value="4">צפייה בלבד</option>
+    </select>
+
+
+    <label>שם פרטי:</label>
+    <input asp-for="Data.FirstName" required /><br />
+
+    <label>שם משפחה:</label>
+    <input asp-for="Data.LastName" required /><br />
+
+    <label>טלפון:</label>
+    <input asp-for="Data.Phone" /><br />
+
+    <label>אימייל:</label>
+    <input asp-for="Data.Email" /><br />
+
+    <button type="submit">עדכן</button>
+</form>
+
+<a href="/User">חזרה לרשימה</a>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    {
+        <div class="alert alert-danger">@error.ErrorMessage</div>
+    }
+}
