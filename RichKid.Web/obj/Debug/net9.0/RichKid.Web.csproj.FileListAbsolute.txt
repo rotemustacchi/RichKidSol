@@ -94,3 +94,16 @@ C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.pdb
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.genruntimeconfig.cache
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\ref\RichKid.Web.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.EntityFrameworkCore.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.EntityFrameworkCore.Abstractions.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Caching.Abstractions.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Caching.Memory.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Logging.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Options.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.csproj.AssemblyReference.cache
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.sourcelink.json
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid..17F382F7.Up2Date

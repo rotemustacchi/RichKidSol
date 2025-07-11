@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RichKid.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+607b1d6692e26d5de7fa21f7e41259f2c620c537")]
 [assembly: System.Reflection.AssemblyProductAttribute("RichKid.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RichKid.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

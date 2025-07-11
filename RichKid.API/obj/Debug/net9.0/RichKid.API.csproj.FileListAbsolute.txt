@@ -41,3 +41,4 @@ C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.API\bin\Debug
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.API\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.API\obj\Debug\net9.0\RichKid.API.sourcelink.json
