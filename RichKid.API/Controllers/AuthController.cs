@@ -16,27 +16,35 @@ namespace RichKid.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _config;
-        private readonly UserService _userService = new();
+        private readonly IUserService _userService;
 
-        public AuthController(IConfiguration config) => _config = config;
+        // Constructor with dependency injection
+        public AuthController(IConfiguration config, IUserService userService)
+        {
+            _config = config;
+            _userService = userService;
+        }
 
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginModel body)
         {
+            // Find user with matching credentials and active status
             var user = _userService.GetAllUsers()
                 .FirstOrDefault(u =>
                     u.UserName == body.UserName &&
                     u.Password == body.Password &&
                     u.Active);
+            
             if (user == null)
-                return Unauthorized("שם משתמש/סיסמה לא תקינים או המשתמש לא פעיל.");
+                return Unauthorized("Username/password are incorrect or user is not active.");
 
-            // יצירת הטוקן
+            // Create JWT token
             var jwt = _config.GetSection("Jwt");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.Now.AddMinutes(int.Parse(jwt["DurationInMinutes"]));
+            var expires = DateTime.Now.AddMinutes(int.Parse(jwt["DurationInMinutes"]!));
 
+            // Create claims for the token
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
@@ -44,6 +52,7 @@ namespace RichKid.API.Controllers
                 new Claim("UserGroupID", (user.UserGroupID ?? 0).ToString())
             };
 
+            // Generate the token
             var token = new JwtSecurityToken(
                 issuer: jwt["Issuer"],
                 audience: jwt["Audience"],
@@ -58,7 +67,7 @@ namespace RichKid.API.Controllers
 
     public class LoginModel
     {
-        public string UserName { get; set; }
-        public string Password { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

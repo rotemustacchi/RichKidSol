@@ -107,3 +107,8 @@ C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.csproj.AssemblyReference.cache
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid.Web.sourcelink.json
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\obj\Debug\net9.0\RichKid..17F382F7.Up2Date
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll

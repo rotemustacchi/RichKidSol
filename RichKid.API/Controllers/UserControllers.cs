@@ -10,7 +10,13 @@ namespace RichKid.API.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
-        private readonly UserService _userService = new();
+        private readonly IUserService _userService;
+
+        // Constructor with dependency injection
+        public UsersController(IUserService userService)
+        {
+            _userService = userService;
+        }
 
         // GET /api/users
         [HttpGet]
@@ -55,8 +61,9 @@ namespace RichKid.API.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] User user)
         {
+            // Validate that route ID matches user ID
             if (id != user.UserID)
-                return BadRequest("ID בתצורה לא תואם למזהה המשתמש");
+                return BadRequest("Route ID does not match user ID");
 
             try
             {
@@ -73,6 +80,7 @@ namespace RichKid.API.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
+            // Check if user exists before deletion
             var existing = _userService.GetUserById(id);
             if (existing == null)
                 return NotFound();

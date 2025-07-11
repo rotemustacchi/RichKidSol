@@ -7,34 +7,48 @@ namespace RichKid.Web.Controllers
 {
     public class UserController : Controller
     {
-        private readonly UserService _userService = new();
+        private readonly IUserService _userService;
 
-        // רק קבוצה 1,2,3,4 (כל משתמש פעיל) מורשה לצפות
-        [GroupAuthorize(1, 2, 3, 4)]
-        public IActionResult Index(string search = "", string status = "")
+        // Use dependency injection instead of manual instantiation
+        public UserController(IUserService userService)
         {
-            var users = _userService.GetAllUsers();
-
-            if (!string.IsNullOrEmpty(search))
-            {
-                users = users.Where(u =>
-                    u.UserName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (u.Data?.Email ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (u.Data?.Phone ?? "").Contains(search)).ToList();
-            }
-
-            if (status == "active") users = users.Where(u => u.Active).ToList();
-            else if (status == "inactive") users = users.Where(u => !u.Active).ToList();
-
-            return View(users);
+            _userService = userService;
         }
 
-        // רק מנהלים (1) ועורכים (2) מורשים ליצור
+        // Only groups 1,2,3,4 (all active users) are authorized to view
+        [GroupAuthorize(1, 2, 3, 4)]
+        public async Task<IActionResult> Index(string search = "", string status = "")
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+
+                if (!string.IsNullOrEmpty(search))
+                {
+                    users = users.Where(u =>
+                        u.UserName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        (u.Data?.Email ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        (u.Data?.Phone ?? "").Contains(search)).ToList();
+                }
+
+                if (status == "active") users = users.Where(u => u.Active).ToList();
+                else if (status == "inactive") users = users.Where(u => !u.Active).ToList();
+
+                return View(users);
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error loading users: {ex.Message}";
+                return View(new List<User>());
+            }
+        }
+
+        // Only admins (1) and editors (2) are authorized to create
         [GroupAuthorize(1, 2)]
         public IActionResult Create() => View();
 
         [HttpPost, GroupAuthorize(1, 2)]
-        public IActionResult Create(User user)
+        public async Task<IActionResult> Create(User user)
         {
             if (user.Data == null) user.Data = new UserData();
 
@@ -42,7 +56,7 @@ namespace RichKid.Web.Controllers
             {
                 try
                 {
-                    _userService.AddUser(user);
+                    await _userService.AddUserAsync(user);
                     return RedirectToAction("Index");
                 }
                 catch (Exception ex)
@@ -55,24 +69,32 @@ namespace RichKid.Web.Controllers
         }
 
         [GroupAuthorize(1, 2, 3, 4)]
-        public IActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id)
         {
             int group = HttpContext.Session.GetInt32("UserGroupID") ?? 0;
-            int? me   = HttpContext.Session.GetInt32("UserID");
+            int? me = HttpContext.Session.GetInt32("UserID");
 
-            // אם אני משתמש רגיל/צופה, מותר רק לערוך את עצמי
+            // If I'm a regular user/viewer, only allowed to edit myself
             if ((group == 3 || group == 4) && me != id)
                 return Forbid();
 
-            var user = _userService.GetUserById(id);
-            return user == null ? NotFound() : View(user);
+            try
+            {
+                var user = await _userService.GetUserByIdAsync(id);
+                return user == null ? NotFound() : View(user);
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error loading user: {ex.Message}";
+                return NotFound();
+            }
         }
 
         [HttpPost, GroupAuthorize(1, 2, 3, 4)]
-        public IActionResult Edit(User user)
+        public async Task<IActionResult> Edit(User user)
         {
             int group = HttpContext.Session.GetInt32("UserGroupID") ?? 0;
-            int? me   = HttpContext.Session.GetInt32("UserID");
+            int? me = HttpContext.Session.GetInt32("UserID");
 
             if ((group == 3 || group == 4) && me != user.UserID)
                 return Forbid();
@@ -84,7 +106,7 @@ namespace RichKid.Web.Controllers
             {
                 try
                 {
-                    _userService.UpdateUser(user);
+                    await _userService.UpdateUserAsync(user);
                     return RedirectToAction("Index");
                 }
                 catch (Exception ex)
@@ -95,19 +117,35 @@ namespace RichKid.Web.Controllers
             return View(user);
         }
 
-        // רק מנהלים (1) מורשים למחוק
+        // Only admins (1) are authorized to delete
         [GroupAuthorize(1)]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var user = _userService.GetUserById(id);
-            return user == null ? NotFound() : View(user);
+            try
+            {
+                var user = await _userService.GetUserByIdAsync(id);
+                return user == null ? NotFound() : View(user);
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error loading user: {ex.Message}";
+                return NotFound();
+            }
         }
 
         [HttpPost, GroupAuthorize(1)]
-        public IActionResult DeleteConfirmed(int id)
+        public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            _userService.DeleteUser(id);
-            return RedirectToAction("Index");
+            try
+            {
+                await _userService.DeleteUserAsync(id);
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error deleting user: {ex.Message}";
+                return RedirectToAction("Index");
+            }
         }
     }
 }

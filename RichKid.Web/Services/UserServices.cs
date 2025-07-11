@@ -1,96 +1,210 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using RichKid.Web.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace RichKid.Web.Services
 {
-    public class UserService
+    public interface IUserService
     {
-        private readonly string _filePath;
+        Task<List<User>> GetAllUsersAsync();
+        Task AddUserAsync(User user);
+        Task DeleteUserAsync(int id);
+        Task UpdateUserAsync(User updatedUser);
+        Task<User?> GetUserByIdAsync(int id);
+        Task<List<User>> SearchByFullNameAsync(string firstName, string lastName);
+    }
 
-        public UserService()
+    public class UserService : IUserService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly string _baseUrl;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
-            var basePath = AppContext.BaseDirectory;
-            var solutionPath = Path.GetFullPath(Path.Combine(basePath, "../../../../")); // קפיצה מה-BIN אל שורש ה-sln
-            _filePath = Path.Combine(solutionPath, "Users.json");
-
-            // Debug – וודא שהנתיב נכון ושהקובץ אכן קיים
-            Console.WriteLine($"[DEBUG] Users.json path: {_filePath}");
-            Console.WriteLine($"[DEBUG] Exists: {File.Exists(_filePath)}");
+            _httpClient = httpClient;
+            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api"; // default to local dev server
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public List<User> GetAllUsers()
+        private void AddAuthHeader()
         {
-            if (!File.Exists(_filePath))
-                return new List<User>();
-
-            var json = File.ReadAllText(_filePath);
-            using var doc = JsonDocument.Parse(json);
-            var users = doc.RootElement
-                           .GetProperty("Users")
-                           .Deserialize<List<User>>();
-            return users ?? new List<User>();
-        }
-
-        public void SaveAllUsers(List<User> users)
-        {
-            var wrapper = new { Users = users };
-            var json = JsonSerializer.Serialize(wrapper,
-                new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
-        }
-
-        public void AddUser(User user)
-        {
-            var users = GetAllUsers();
-            if (users.Any(u => u.UserName == user.UserName))
-                throw new Exception("שם המשתמש כבר קיים במערכת.");
-
-            user.UserID = users.Any() ? users.Max(u => u.UserID) + 1 : 1;
-
-            if (user.Data == null)
-                user.Data = new UserData();
-
-            user.Data.CreationDate = DateTime.Now.ToString("yyyy-MM-dd");
-            users.Add(user);
-            SaveAllUsers(users);
-        }
-
-        public void DeleteUser(int id)
-        {
-            var users = GetAllUsers();
-            var toRemove = users.FirstOrDefault(u => u.UserID == id);
-            if (toRemove != null)
+            // grab the auth token from session and add to request headers
+            var token = _httpContextAccessor.HttpContext?.Session.GetString("AuthToken");
+            if (!string.IsNullOrEmpty(token))
             {
-                users.Remove(toRemove);
-                SaveAllUsers(users);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
 
-        public void UpdateUser(User updatedUser)
+        public async Task<List<User>> GetAllUsersAsync()
         {
-            var users = GetAllUsers();
-
-            if (users.Any(u => u.UserName == updatedUser.UserName && u.UserID != updatedUser.UserID))
-                throw new Exception("שם המשתמש כבר קיים במערכת.");
-
-            var existing = users.FirstOrDefault(u => u.UserID == updatedUser.UserID);
-            if (existing != null)
+            try
             {
-                existing.UserName    = updatedUser.UserName;
-                existing.Password    = updatedUser.Password;
-                existing.Active      = updatedUser.Active;
-                existing.UserGroupID = updatedUser.UserGroupID;
-                existing.Data        = updatedUser.Data;
-
-                SaveAllUsers(users);
+                AddAuthHeader(); // make sure we're authenticated
+                
+                var response = await _httpClient.GetAsync($"{_baseUrl}/users");
+                
+                // check if user session expired
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true // handle API response casing differences
+                });
+                
+                return users ?? new List<User>(); // return empty list if null
+            }
+            catch (HttpRequestException ex)
+            {
+                // wrap in more descriptive exception
+                throw new Exception($"Error fetching users: {ex.Message}", ex);
             }
         }
 
-        public User? GetUserById(int id)
-            => GetAllUsers().FirstOrDefault(u => u.UserID == id);
+        public async Task AddUserAsync(User user)
+        {
+            try
+            {
+                AddAuthHeader(); // need auth for POST operations
+                
+                var json = JsonSerializer.Serialize(user);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync($"{_baseUrl}/users", content);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode(); // will throw if not 2xx
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error adding user: {ex.Message}", ex);
+            }
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            try
+            {
+                AddAuthHeader(); // auth required for deletion
+                
+                var response = await _httpClient.DeleteAsync($"{_baseUrl}/users/{id}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error deleting user: {ex.Message}", ex);
+            }
+        }
+
+        public async Task UpdateUserAsync(User updatedUser)
+        {
+            try
+            {
+                AddAuthHeader(); // auth needed for updates
+                
+                var json = JsonSerializer.Serialize(updatedUser);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                // use the user's ID in the URL path
+                var response = await _httpClient.PutAsync($"{_baseUrl}/users/{updatedUser.UserID}", content);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error updating user: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            try
+            {
+                AddAuthHeader();
+                
+                var response = await _httpClient.GetAsync($"{_baseUrl}/users/{id}");
+                
+                // return null if user not found
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return null;
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var user = JsonSerializer.Deserialize<User>(json, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+                
+                return user;
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error fetching user by ID: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<List<User>> SearchByFullNameAsync(string firstName, string lastName)
+        {
+            try
+            {
+                AddAuthHeader();
+                
+                // URL encode the search parameters to handle special characters
+                var response = await _httpClient.GetAsync($"{_baseUrl}/users/search?firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+                
+                return users ?? new List<User>(); // fallback to empty list
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error searching users: {ex.Message}", ex);
+            }
+        }
     }
 }

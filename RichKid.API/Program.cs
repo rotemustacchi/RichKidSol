@@ -2,11 +2,11 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-
+using RichKid.Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1️⃣ JWT Authentication
+// JWT Authentication
 builder.Services
   .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddJwtBearer(options =>
@@ -25,29 +25,29 @@ builder.Services
     };
   });
 
-// 2️⃣ Authorization
+//  Authorization
 builder.Services.AddAuthorization();
 
-// 3️⃣ CORS — לאפשר רק לדומיין של ה-Web שלך
+// CORS — Allow only your Web domain
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWeb", policy =>
     {
         policy
-          .WithOrigins("https://localhost:7143")  // כתובת RichKid.Web שלך
+          .WithOrigins("https://localhost:7143")  // RichKid.Web address
           .AllowAnyHeader()
           .AllowAnyMethod();
     });
 });
 
-// 4️⃣ Controllers + Swagger/OpenAPI
+// Controllers + Swagger/OpenAPI
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();  // משמש ל-Swagger
+builder.Services.AddEndpointsApiExplorer();  // Used for Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "RichKid.API", Version = "v1" });
 
-    // הוספת אפשרות ל-JWT
+    // Add JWT support to Swagger
     c.AddSecurityDefinition("Bearer", new()
     {
         Name = "Authorization",
@@ -55,7 +55,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "הכנס את הטוקן כאן: Bearer {token}"
+        Description = "Enter token here: Bearer {token}"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -72,6 +72,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Register custom services for dependency injection
+builder.Services.AddScoped<IDataService, DataService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
@@ -82,9 +85,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "RichKid.API V1");
-        // c.RoutePrefix = "";   // אם תרצה שה־UI יטען על שורש ה־API ("/")
+        // c.RoutePrefix = "";   // If you want the UI to load on API root ("/")
     });
-
 }
 else
 {
@@ -94,7 +96,7 @@ else
 
 app.UseCors("AllowWeb");
 
-app.UseAuthentication();   // חייב לפני UseAuthorization()
+app.UseAuthentication();   // Must be before UseAuthorization()
 app.UseAuthorization();
 
 app.MapControllers();

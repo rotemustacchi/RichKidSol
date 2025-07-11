@@ -1,47 +1,81 @@
 using Microsoft.AspNetCore.Mvc;
-using RichKid.Web.Models;
 using RichKid.Web.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace RichKid.Web.Controllers
 {
     public class AuthController : Controller
     {
-        private readonly UserService _userService = new();
+        private readonly IAuthService _authService;
 
-        [HttpGet]
-        public IActionResult Login() => View();
-
-        [HttpPost]
-        public IActionResult Login(string username, string password)
+        public AuthController(IAuthService authService)
         {
-            // 1️⃣ מציאת משתמש ע"י שם וסיסמה (בלי להתחשב ב-Active)
-            var user = _userService
-                .GetAllUsers()
-                .FirstOrDefault(u => u.UserName == username && u.Password == password);
-
-            if (user == null)
-            {
-                // לא נמצאה התאמה בכלל
-                ViewBag.Error = "שם משתמש או סיסמה שגויים.";
-                return View();
-            }
-
-            if (!user.Active)
-            {
-                // משתמש קיים אך מסומן כלא פעיל
-                ViewBag.Error = "המשתמש לא פעיל, אנא פנה למנהל.";
-                return View();
-            }
-
-            // 2️⃣ משתמש תקין + פעיל — ניצור לו סשן ונמשיך
-            HttpContext.Session.SetInt32("UserID", user.UserID);
-            HttpContext.Session.SetInt32("UserGroupID", user.UserGroupID ?? 0);
-            return RedirectToAction("Index", "User");
+            _authService = authService;
         }
 
+        [HttpGet]
+        public IActionResult Login()
+        {
+            // If user is already authenticated, redirect to User page
+            if (_authService.IsAuthenticated())
+            {
+                return RedirectToAction("Index", "User");
+            }
+            
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Login(string username, string password)
+        {
+            try
+            {
+                var result = await _authService.LoginAsync(username, password);
+                
+                if (result.Success && !string.IsNullOrEmpty(result.Token))
+                {
+                    // Parse JWT token to extract user information
+                    var handler = new JwtSecurityTokenHandler();
+                    var jsonToken = handler.ReadJwtToken(result.Token);
+                    
+                    // Extract user information from token claims
+                    var userIdClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "UserID");
+                    var userGroupIdClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "UserGroupID");
+                    
+                    if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                    {
+                        HttpContext.Session.SetInt32("UserID", userId);
+                    }
+                    
+                    if (userGroupIdClaim != null && int.TryParse(userGroupIdClaim.Value, out int userGroupId))
+                    {
+                        HttpContext.Session.SetInt32("UserGroupID", userGroupId);
+                    }
+                    
+                    return RedirectToAction("Index", "User");
+                }
+                else
+                {
+                    ViewBag.Error = result.ErrorMessage ?? "wrong username or password.";
+                    return View();
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                ViewBag.Error = "wrong username or password.";
+                return View();
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Login failed: {ex.Message}";
+                return View();
+            }
+        }
 
         public IActionResult Logout()
         {
+            _authService.ClearAuthToken();
             HttpContext.Session.Clear();
             return RedirectToAction("Login");
         }

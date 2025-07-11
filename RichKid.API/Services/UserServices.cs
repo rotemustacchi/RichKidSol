@@ -1,69 +1,66 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using RichKid.Shared.Models;
 
 namespace RichKid.Shared.Services
 {
-    public class UserService
+    public interface IUserService
     {
-        private readonly string _filePath;
+        List<User> GetAllUsers();
+        void AddUser(User user);
+        void DeleteUser(int id);
+        void UpdateUser(User updatedUser);
+        User? GetUserById(int id);
+        List<User> SearchByFullName(string first, string last);
+    }
 
-        public UserService()
+    public class UserService : IUserService
+    {
+        private readonly IDataService _dataService;
+
+        public UserService(IDataService dataService)
         {
-            var basePath = AppContext.BaseDirectory;
-            var solutionPath = Path.GetFullPath(Path.Combine(basePath, "../../../../")); // קפיצה מה-BIN אל שורש ה-sln
-            _filePath = Path.Combine(solutionPath, "Users.json");
+            _dataService = dataService;
         }
-
 
         public List<User> GetAllUsers()
         {
-            if (!File.Exists(_filePath))
-                return new List<User>();
-
-            var json = File.ReadAllText(_filePath);
-            using var doc = JsonDocument.Parse(json);
-            var users = doc.RootElement
-                           .GetProperty("Users")
-                           .Deserialize<List<User>>();
-            return users ?? new List<User>();
-        }
-
-        public void SaveAllUsers(List<User> users)
-        {
-            var wrapper = new { Users = users };
-            var json = JsonSerializer.Serialize(wrapper,
-                new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+            return _dataService.LoadUsers();
         }
 
         public void AddUser(User user)
         {
             var users = GetAllUsers();
+            
+            // Check if username already exists
             if (users.Any(u => u.UserName == user.UserName))
-                throw new Exception("שם המשתמש כבר קיים במערכת.");
+                throw new Exception("Username already exists in the system.");
 
+            // Auto-generate user ID
             user.UserID = users.Any() ? users.Max(u => u.UserID) + 1 : 1;
 
+            // Initialize user data if not provided
             if (user.Data == null)
                 user.Data = new UserData();
 
+            // Set creation date
             user.Data.CreationDate = DateTime.Now.ToString("yyyy-MM-dd");
+            
+            // Add user and save
             users.Add(user);
-            SaveAllUsers(users);
+            _dataService.SaveUsers(users);
         }
 
         public void DeleteUser(int id)
         {
             var users = GetAllUsers();
             var toRemove = users.FirstOrDefault(u => u.UserID == id);
+            
             if (toRemove != null)
             {
                 users.Remove(toRemove);
-                SaveAllUsers(users);
+                _dataService.SaveUsers(users);
             }
         }
 
@@ -71,9 +68,11 @@ namespace RichKid.Shared.Services
         {
             var users = GetAllUsers();
 
+            // Check if username is already taken by another user
             if (users.Any(u => u.UserName == updatedUser.UserName && u.UserID != updatedUser.UserID))
-                throw new Exception("שם המשתמש כבר קיים במערכת.");
+                throw new Exception("Username already exists in the system.");
 
+            // Find and update existing user
             var existing = users.FirstOrDefault(u => u.UserID == updatedUser.UserID);
             if (existing != null)
             {
@@ -83,7 +82,7 @@ namespace RichKid.Shared.Services
                 existing.UserGroupID = updatedUser.UserGroupID;
                 existing.Data        = updatedUser.Data;
 
-                SaveAllUsers(users);
+                _dataService.SaveUsers(users);
             }
         }
 

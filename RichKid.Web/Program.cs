@@ -1,44 +1,84 @@
+using RichKid.Web.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. מוסיפים שירותי Session
+// 1. Add Session services for user state management
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
+    options.IdleTimeout = TimeSpan.FromMinutes(30);      // Session expires after 30 minutes of inactivity
+    options.Cookie.HttpOnly = true;                      // Prevent client-side JavaScript access to session cookie
+    options.Cookie.IsEssential = true;                   // Required for GDPR compliance
 });
 
-// 2. מוסיפים IHttpContextAccessor (דרוש ל־@inject ב־Razor)
+// 2. Add IHttpContextAccessor (required for @inject in Razor pages)
 builder.Services.AddHttpContextAccessor();
 
-// 3. מוסיפים MVC
+// 3. Add MVC services
 builder.Services.AddControllersWithViews();
+
+// 4. Register HttpClient for API communication
+builder.Services.AddHttpClient<IUserService, UserService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "RichKid.Web/1.0");
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    if (builder.Environment.IsDevelopment())
+    {
+        // Ignore SSL certificate errors in development
+        handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
+
+// 5. Register HttpClient for Auth service
+builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "RichKid.Web/1.0");
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    if (builder.Environment.IsDevelopment())
+    {
+        // Ignore SSL certificate errors in development
+        handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
+
+// 6. Register services with dependency injection
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-// 4. Middleware
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+    app.UseExceptionHandler("/Home/Error");              // Handle exceptions in production
+    app.UseHsts();                                       // HTTP Strict Transport Security
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseHttpsRedirection();                               // Redirect HTTP to HTTPS
+app.UseStaticFiles();                                    // Serve static files (CSS, JS, images)
 
-// חשוב: UseRouting לפני ה־Session/Authorization
+// Important: UseRouting must come before Session/Authorization
 app.UseRouting();
 
-// 5. מפעילים Session
+// 7. Enable Session middleware
 app.UseSession();
 
-// 6. מפעילים Authorization
+// 8. Enable Authorization middleware
 app.UseAuthorization();
 
-// 7. מיפוי הנתיבים
+// 9. Configure default route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Auth}/{action=Login}/{id?}");
+    pattern: "{controller=Auth}/{action=Login}/{id?}");  // Default to Auth controller, Login action
 
 app.Run();
