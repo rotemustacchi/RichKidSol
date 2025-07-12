@@ -83,6 +83,20 @@
         "Phone": "0508647821",
         "Email": "Tuval@gmail.com"
       }
+    },
+    {
+      "UserID": 7,
+      "Active": true,
+      "UserName": "MIMI",
+      "Password": "1234",
+      "UserGroupID": null,
+      "Data": {
+        "CreationDate": "2025-07-12",
+        "FirstName": "mimi",
+        "LastName": "mimi",
+        "Phone": "050-0000000",
+        "Email": "mimi@gmail.com"
+      }
     }
   ]
 }

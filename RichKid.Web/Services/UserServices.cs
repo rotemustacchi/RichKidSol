@@ -21,26 +21,30 @@ namespace RichKid.Web.Services
         private readonly string _userByIdEndpoint;
         private readonly string _usersSearchEndpoint;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<UserService> _logger; // Add logger for tracking user service operations
 
-        public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, ILogger<UserService> logger)
         {
             _httpClient = httpClient;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger; // Inject logger to monitor all user service operations
             
             // Load all API endpoint configurations from appsettings
             _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api";
             _usersEndpoint = configuration["ApiSettings:Endpoints:Users:Base"] ?? "/users";
             _userByIdEndpoint = configuration["ApiSettings:Endpoints:Users:GetById"] ?? "/users/{0}";
             _usersSearchEndpoint = configuration["ApiSettings:Endpoints:Users:Search"] ?? "/users/search";
+            
+            _logger.LogDebug("UserService initialized with base URL: {BaseUrl}, users endpoint: {UsersEndpoint}", 
+                _baseUrl, _usersEndpoint);
         }
 
         private void AddAuthHeader()
         {
             var token = _httpContextAccessor.HttpContext?.Session.GetString("AuthToken");
             
-            Console.WriteLine($"=== UserService.AddAuthHeader ===");
-            Console.WriteLine($"Token from session: {(string.IsNullOrEmpty(token) ? "NULL/EMPTY" : "EXISTS")}");
-            Console.WriteLine($"Token length: {token?.Length ?? 0}");
+            _logger.LogDebug("Adding authentication header - Token present: {HasToken}", 
+                string.IsNullOrEmpty(token) ? "No" : "Yes");
             
             if (!string.IsNullOrEmpty(token))
             {
@@ -48,62 +52,66 @@ namespace RichKid.Web.Services
                 _httpClient.DefaultRequestHeaders.Authorization = null;
                 // Set the bearer token for API authentication
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                Console.WriteLine($"Authorization header set successfully");
+                _logger.LogDebug("Bearer token set in authorization header");
             }
             else
             {
-                Console.WriteLine($"No token found - request will go without auth");
+                _logger.LogWarning("No authentication token found - request will proceed without authentication");
             }
         }
 
         private void ValidateResponse(HttpResponseMessage response, string operation)
         {
             if (response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("HTTP request successful for operation: {Operation}, Status: {StatusCode}", 
+                    operation, response.StatusCode);
                 return; // All good, nothing to validate
+            }
 
-            Console.WriteLine($"HTTP Error in {operation}: {response.StatusCode}");
+            _logger.LogWarning("HTTP error in operation: {Operation}, Status: {StatusCode}", operation, response.StatusCode);
             
             // Handle different error types with user-friendly messages
             switch (response.StatusCode)
             {
                 case System.Net.HttpStatusCode.Unauthorized:
-                    Console.WriteLine($"Session expired in {operation}");
+                    _logger.LogWarning("Session expired during operation: {Operation}", operation);
                     throw new UnauthorizedAccessException("Your session has expired. Please log in again to continue.");
                 
                 case System.Net.HttpStatusCode.Forbidden:
-                    Console.WriteLine($"Permission denied in {operation}");
+                    _logger.LogWarning("Permission denied during operation: {Operation}", operation);
                     throw new UnauthorizedAccessException("You don't have permission to perform this action. Please contact your administrator if you think this is an error.");
                 
                 case System.Net.HttpStatusCode.NotFound:
-                    Console.WriteLine($"Resource not found in {operation}");
+                    _logger.LogWarning("Resource not found during operation: {Operation}", operation);
                     throw new ArgumentException("The requested information could not be found. It may have been deleted or moved.");
                 
                 case System.Net.HttpStatusCode.BadRequest:
                     // Try to get the specific error message from API
                     var errorContent = response.Content.ReadAsStringAsync().Result;
-                    Console.WriteLine($"Bad request error content: {errorContent}");
+                    _logger.LogWarning("Bad request during operation: {Operation}, Error content: {ErrorContent}", 
+                        operation, errorContent ?? "No error details");
                     
                     // Handle username already exists specifically
                     if (!string.IsNullOrWhiteSpace(errorContent) && 
                         (errorContent.Contains("Username already exists") || errorContent.Contains("already exists")))
                     {
                         var cleanError = errorContent.Trim('"');
-                        Console.WriteLine($"Username conflict detected: {cleanError}");
+                        _logger.LogDebug("Username conflict detected: {ErrorMessage}", cleanError);
                         throw new HttpRequestException(cleanError);
                     }
                     
                     var cleanBadRequestError = string.IsNullOrWhiteSpace(errorContent) ? 
                         "There was a problem with your request. Please check your information and try again." : 
                         errorContent.Trim('"');
-                    Console.WriteLine($"Bad request in {operation}: {cleanBadRequestError}");
                     throw new HttpRequestException(cleanBadRequestError);
                 
                 case System.Net.HttpStatusCode.InternalServerError:
-                    Console.WriteLine($"Server error in {operation}");
+                    _logger.LogError("Server error during operation: {Operation}", operation);
                     throw new HttpRequestException("Something went wrong on our end. Please try again in a few moments.");
                 
                 case System.Net.HttpStatusCode.ServiceUnavailable:
-                    Console.WriteLine($"Service unavailable in {operation}");
+                    _logger.LogError("Service unavailable during operation: {Operation}", operation);
                     throw new HttpRequestException("The service is temporarily unavailable. Please try again later.");
                 
                 default:
@@ -112,7 +120,8 @@ namespace RichKid.Web.Services
                     var errorMessage = string.IsNullOrWhiteSpace(generalError) ? 
                         "An unexpected error occurred. Please try again or contact support if the problem continues." : 
                         generalError.Trim('"');
-                    Console.WriteLine($"HTTP error in {operation}: {errorMessage}");
+                    _logger.LogError("Unexpected HTTP error during operation: {Operation}, Status: {StatusCode}, Error: {ErrorMessage}", 
+                        operation, response.StatusCode, errorMessage);
                     throw new HttpRequestException(errorMessage);
             }
         }
@@ -122,32 +131,28 @@ namespace RichKid.Web.Services
         {
             try
             {
-                Console.WriteLine($"=== UserService.GetAllUsers START ===");
-                Console.WriteLine($"Base URL: {_baseUrl}");
-                Console.WriteLine($"Users endpoint: {_usersEndpoint}");
+                _logger.LogInformation("Starting GetAllUsers request");
                 
                 AddAuthHeader(); // Make sure we're authenticated
                 
                 // Build full URL using config endpoint
                 var fullUrl = $"{_baseUrl}{_usersEndpoint}";
-                Console.WriteLine($"Making GET request to: {fullUrl}");
+                _logger.LogDebug("Making GET request to: {Url}", fullUrl);
                 
                 var response = _httpClient.GetAsync(fullUrl).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
-                Console.WriteLine($"Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
+                _logger.LogDebug("GetAllUsers response received with status: {StatusCode}", response.StatusCode);
                 
                 // Check if response is valid before trying to read it
                 ValidateResponse(response, "GetAllUsers");
                 
                 var json = response.Content.ReadAsStringAsync().Result;
-                Console.WriteLine($"Response JSON length: {json?.Length ?? 0}");
-                Console.WriteLine($"Response JSON (first 200 chars): {(string.IsNullOrEmpty(json) ? "EMPTY" : json.Substring(0, Math.Min(200, json.Length)))}");
+                _logger.LogDebug("Response JSON received, length: {JsonLength} characters", json?.Length ?? 0);
                 
                 // Handle empty responses gracefully
                 if (string.IsNullOrEmpty(json))
                 {
-                    Console.WriteLine($"Empty response - returning empty list");
+                    _logger.LogWarning("Empty response received from GetAllUsers - returning empty list");
                     return new List<User>();
                 }
                 
@@ -158,28 +163,30 @@ namespace RichKid.Web.Services
                         PropertyNameCaseInsensitive = true 
                     });
                     
-                    Console.WriteLine($"Successfully got {users?.Count ?? 0} users");
-                    Console.WriteLine($"=== UserService.GetAllUsers END ===");
+                    var userCount = users?.Count ?? 0;
+                    _logger.LogInformation("GetAllUsers completed successfully. Retrieved {UserCount} users", userCount);
                     
                     return users ?? new List<User>();
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"JSON parsing failed: {ex.Message}");
+                    _logger.LogError(ex, "Failed to parse GetAllUsers JSON response");
                     throw new Exception("Invalid response format from server", ex);
                 }
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in GetAllUsers");
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in GetAllUsers");
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in GetAllUsers: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in GetAllUsers");
                 throw new Exception("We're having trouble loading the user list. Please refresh the page or try again later.", ex);
             }
         }
@@ -188,9 +195,12 @@ namespace RichKid.Web.Services
         {
             try
             {
+                _logger.LogInformation("Starting AddUser request for username: {Username}", user.UserName);
+                
                 // Basic validation before making the request
                 if (user == null)
                 {
+                    _logger.LogError("AddUser called with null user object");
                     throw new ArgumentNullException(nameof(user), "User object cannot be null");
                 }
 
@@ -199,36 +209,38 @@ namespace RichKid.Web.Services
                 var json = JsonSerializer.Serialize(user);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                Console.WriteLine($"=== UserService.AddUser ===");
                 // Use config endpoint instead of hardcoded URL
                 var fullUrl = $"{_baseUrl}{_usersEndpoint}";
-                Console.WriteLine($"Sending POST request to: {fullUrl}");
-                Console.WriteLine($"Request JSON: {json}");
+                _logger.LogDebug("Sending POST request to: {Url} for user: {Username}", fullUrl, user.UserName);
                 
                 var response = _httpClient.PostAsync(fullUrl, content).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
+                _logger.LogDebug("AddUser response received with status: {StatusCode} for user: {Username}", 
+                    response.StatusCode, user.UserName);
                 
                 // Check if the request was successful
                 ValidateResponse(response, "AddUser");
                 
-                Console.WriteLine("User added successfully");
+                _logger.LogInformation("AddUser completed successfully for user: {Username}", user.UserName);
             }
             catch (ArgumentNullException)
             {
+                _logger.LogError("AddUser failed - User information is required");
                 throw new ArgumentNullException("User information is required. Please fill out the form completely.");
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in AddUser for user: {Username}", user?.UserName ?? "Unknown");
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in AddUser for user: {Username}", user?.UserName ?? "Unknown");
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in AddUser: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in AddUser for user: {Username}", user?.UserName ?? "Unknown");
                 throw new Exception("We couldn't create the new user. Please check your information and try again.", ex);
             }
         }
@@ -237,9 +249,12 @@ namespace RichKid.Web.Services
         {
             try
             {
+                _logger.LogInformation("Starting DeleteUser request for user ID: {UserId}", id);
+                
                 // Make sure we have a valid ID
                 if (id <= 0)
                 {
+                    _logger.LogError("DeleteUser called with invalid ID: {UserId}", id);
                     throw new ArgumentException("User ID must be a positive number", nameof(id));
                 }
 
@@ -249,33 +264,36 @@ namespace RichKid.Web.Services
                 var deleteEndpoint = string.Format(_userByIdEndpoint, id);
                 var fullUrl = $"{_baseUrl}{deleteEndpoint}";
                 
-                Console.WriteLine($"=== UserService.DeleteUser ===");
-                Console.WriteLine($"Sending DELETE request to: {fullUrl}");
+                _logger.LogDebug("Sending DELETE request to: {Url} for user ID: {UserId}", fullUrl, id);
                 
                 var response = _httpClient.DeleteAsync(fullUrl).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
+                _logger.LogDebug("DeleteUser response received with status: {StatusCode} for user ID: {UserId}", 
+                    response.StatusCode, id);
                 
                 // Validate the response
                 ValidateResponse(response, "DeleteUser");
                 
-                Console.WriteLine("User deleted successfully");
+                _logger.LogInformation("DeleteUser completed successfully for user ID: {UserId}", id);
             }
             catch (ArgumentException)
             {
+                _logger.LogError("DeleteUser failed - Invalid user ID: {UserId}", id);
                 throw new ArgumentException("Please select a valid user to delete.");
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in DeleteUser for user ID: {UserId}", id);
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in DeleteUser for user ID: {UserId}", id);
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in DeleteUser: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in DeleteUser for user ID: {UserId}", id);
                 throw new Exception("We couldn't delete the user. Please try again or contact support if the problem continues.", ex);
             }
         }
@@ -284,14 +302,19 @@ namespace RichKid.Web.Services
         {
             try
             {
+                _logger.LogInformation("Starting UpdateUser request for user: {Username} (ID: {UserId})", 
+                    updatedUser.UserName, updatedUser.UserID);
+                
                 // Validate input
                 if (updatedUser == null)
                 {
+                    _logger.LogError("UpdateUser called with null user object");
                     throw new ArgumentNullException(nameof(updatedUser), "User object cannot be null");
                 }
 
                 if (updatedUser.UserID <= 0)
                 {
+                    _logger.LogError("UpdateUser called with invalid user ID: {UserId}", updatedUser.UserID);
                     throw new ArgumentException("User ID must be a positive number", nameof(updatedUser));
                 }
 
@@ -300,41 +323,45 @@ namespace RichKid.Web.Services
                 var json = JsonSerializer.Serialize(updatedUser);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                Console.WriteLine($"=== UserService.UpdateUser ===");
-                
                 // Build URL with user ID using config endpoint
                 var updateEndpoint = string.Format(_userByIdEndpoint, updatedUser.UserID);
                 var fullUrl = $"{_baseUrl}{updateEndpoint}";
-                Console.WriteLine($"Sending PUT request to: {fullUrl}");
+                _logger.LogDebug("Sending PUT request to: {Url} for user: {Username}", fullUrl, updatedUser.UserName);
                 
                 var response = _httpClient.PutAsync(fullUrl, content).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
+                _logger.LogDebug("UpdateUser response received with status: {StatusCode} for user: {Username}", 
+                    response.StatusCode, updatedUser.UserName);
                 
                 // Check if update was successful
                 ValidateResponse(response, "UpdateUser");
                 
-                Console.WriteLine("User updated successfully");
+                _logger.LogInformation("UpdateUser completed successfully for user: {Username} (ID: {UserId})", 
+                    updatedUser.UserName, updatedUser.UserID);
             }
             catch (ArgumentNullException)
             {
+                _logger.LogError("UpdateUser failed - User information is required");
                 throw new ArgumentNullException("User information is required. Please fill out the form completely.");
             }
             catch (ArgumentException)
             {
+                _logger.LogError("UpdateUser failed - Invalid user data provided");
                 throw new ArgumentException("Please select a valid user to update.");
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in UpdateUser for user: {Username}", updatedUser?.UserName ?? "Unknown");
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in UpdateUser for user: {Username}", updatedUser?.UserName ?? "Unknown");
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in UpdateUser: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in UpdateUser for user: {Username}", updatedUser?.UserName ?? "Unknown");
                 throw new Exception("We couldn't save the changes. Please check your information and try again.", ex);
             }
         }
@@ -343,9 +370,12 @@ namespace RichKid.Web.Services
         {
             try
             {
+                _logger.LogDebug("Starting GetUserById request for user ID: {UserId}", id);
+                
                 // Validate ID first
                 if (id <= 0)
                 {
+                    _logger.LogError("GetUserById called with invalid ID: {UserId}", id);
                     throw new ArgumentException("User ID must be a positive number", nameof(id));
                 }
 
@@ -355,17 +385,17 @@ namespace RichKid.Web.Services
                 var getUserEndpoint = string.Format(_userByIdEndpoint, id);
                 var fullUrl = $"{_baseUrl}{getUserEndpoint}";
                 
-                Console.WriteLine($"=== UserService.GetUserById ===");
-                Console.WriteLine($"Sending GET request to: {fullUrl}");
+                _logger.LogDebug("Sending GET request to: {Url} for user ID: {UserId}", fullUrl, id);
                 
                 var response = _httpClient.GetAsync(fullUrl).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
+                _logger.LogDebug("GetUserById response received with status: {StatusCode} for user ID: {UserId}", 
+                    response.StatusCode, id);
                 
                 // 404 is valid - user just doesn't exist
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine("User not found - returning null");
+                    _logger.LogDebug("User not found with ID: {UserId}", id);
                     return null;
                 }
                 
@@ -376,7 +406,7 @@ namespace RichKid.Web.Services
                 
                 if (string.IsNullOrEmpty(json))
                 {
-                    Console.WriteLine("Empty response - returning null");
+                    _logger.LogWarning("Empty response received from GetUserById for user ID: {UserId}", id);
                     return null;
                 }
                 
@@ -387,30 +417,35 @@ namespace RichKid.Web.Services
                         PropertyNameCaseInsensitive = true 
                     });
                     
-                    Console.WriteLine($"Successfully got user: {user?.UserName ?? "null"}");
+                    _logger.LogInformation("GetUserById completed successfully for user: {Username} (ID: {UserId})", 
+                        user?.UserName ?? "Unknown", id);
+                        
                     return user;
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"JSON parsing failed: {ex.Message}");
+                    _logger.LogError(ex, "Failed to parse GetUserById JSON response for user ID: {UserId}", id);
                     throw new Exception("Invalid response format from server", ex);
                 }
             }
             catch (ArgumentException)
             {
+                _logger.LogError("GetUserById failed - Invalid user ID: {UserId}", id);
                 throw new ArgumentException("Please select a valid user to view.");
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in GetUserById for user ID: {UserId}", id);
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in GetUserById for user ID: {UserId}", id);
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in GetUserById: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in GetUserById for user ID: {UserId}", id);
                 throw new Exception("We couldn't load the user information. Please try again.", ex);
             }
         }
@@ -419,9 +454,13 @@ namespace RichKid.Web.Services
         {
             try
             {
+                _logger.LogInformation("Starting SearchByFullName request with firstName: '{FirstName}', lastName: '{LastName}'", 
+                    first ?? "null", last ?? "null");
+                
                 // Need at least one name to search
                 if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(last))
                 {
+                    _logger.LogError("SearchByFullName called with both names empty");
                     throw new ArgumentException("At least one name parameter must be provided");
                 }
 
@@ -435,14 +474,13 @@ namespace RichKid.Web.Services
                     queryParams.Add($"lastName={Uri.EscapeDataString(last)}");
                 
                 var queryString = string.Join("&", queryParams);
-                var fullUrl = $"{_baseUrl}{_usersSearchEndpoint}?{queryString}"; // Using config endpoint
+                var fullUrl = $"{_baseUrl}{_usersSearchEndpoint}?{queryString}";
                 
-                Console.WriteLine($"=== UserService.SearchByFullName ===");
-                Console.WriteLine($"Sending GET request to: {fullUrl}");
+                _logger.LogDebug("Sending GET request to: {Url} for search", fullUrl);
                 
                 var response = _httpClient.GetAsync(fullUrl).Result;
                 
-                Console.WriteLine($"Response Status: {response.StatusCode}");
+                _logger.LogDebug("SearchByFullName response received with status: {StatusCode}", response.StatusCode);
                 
                 // Validate the response
                 ValidateResponse(response, "SearchUsers");
@@ -451,7 +489,7 @@ namespace RichKid.Web.Services
                 
                 if (string.IsNullOrEmpty(json))
                 {
-                    Console.WriteLine("Empty search results - returning empty list");
+                    _logger.LogDebug("Empty search results received - returning empty list");
                     return new List<User>();
                 }
                 
@@ -462,30 +500,35 @@ namespace RichKid.Web.Services
                         PropertyNameCaseInsensitive = true 
                     });
                     
-                    Console.WriteLine($"Search found {users?.Count ?? 0} users");
+                    var resultCount = users?.Count ?? 0;
+                    _logger.LogInformation("SearchByFullName completed successfully. Found {ResultCount} users matching criteria", resultCount);
+                    
                     return users ?? new List<User>();
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"JSON parsing failed in search: {ex.Message}");
+                    _logger.LogError(ex, "Failed to parse SearchByFullName JSON response");
                     throw new Exception("Invalid response format from server", ex);
                 }
             }
             catch (ArgumentException)
             {
+                _logger.LogError("SearchByFullName failed - Invalid search parameters");
                 throw new ArgumentException("Please enter at least a first name or last name to search.");
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Authorization error in SearchByFullName");
                 throw; // Let auth errors bubble up - these are already user-friendly
             }
             catch (HttpRequestException)
             {
+                _logger.LogWarning("HTTP request error in SearchByFullName");
                 throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected error in SearchUsers: {ex.GetType().Name} - {ex.Message}");
+                _logger.LogError(ex, "Unexpected error in SearchByFullName");
                 throw new Exception("We couldn't search for users right now. Please try again later.", ex);
             }
         }
@@ -493,36 +536,42 @@ namespace RichKid.Web.Services
         // Additional async methods for better performance in web scenarios
         public async Task<List<User>> GetAllUsersAsync()
         {
+            _logger.LogDebug("GetAllUsersAsync called - delegating to synchronous method");
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             return GetAllUsers();
         }
 
         public async Task AddUserAsync(User user)
         {
+            _logger.LogDebug("AddUserAsync called for user: {Username} - delegating to synchronous method", user.UserName);
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             AddUser(user);
         }
 
         public async Task DeleteUserAsync(int id)
         {
+            _logger.LogDebug("DeleteUserAsync called for user ID: {UserId} - delegating to synchronous method", id);
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             DeleteUser(id);
         }
 
         public async Task UpdateUserAsync(User updatedUser)
         {
+            _logger.LogDebug("UpdateUserAsync called for user: {Username} - delegating to synchronous method", updatedUser.UserName);
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             UpdateUser(updatedUser);
         }
 
         public async Task<User?> GetUserByIdAsync(int id)
         {
+            _logger.LogDebug("GetUserByIdAsync called for user ID: {UserId} - delegating to synchronous method", id);
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             return GetUserById(id);
         }
 
         public async Task<List<User>> SearchByFullNameAsync(string firstName, string lastName)
         {
+            _logger.LogDebug("SearchByFullNameAsync called - delegating to synchronous method");
             // Call the synchronous method directly to avoid Task.Run wrapping exceptions
             return SearchByFullName(firstName, lastName);
         }

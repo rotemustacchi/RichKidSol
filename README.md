@@ -1,13 +1,13 @@
 # RichKid User Management System
 
-A full-stack .NET application for user management with JWT-based authentication and role-based access control, featuring a RESTful Web API backend, MVC frontend, and shared library architecture.
+A full-stack .NET application for user management with JWT-based authentication and role-based access control, featuring a RESTful Web API backend, MVC frontend, and shared library architecture with comprehensive logging.
 
 ## 🏗️ Architecture
 
 The solution consists of three main projects:
 
-- **RichKid.API** - RESTful Web API backend with JWT authentication
-- **RichKid.Web** - MVC frontend application with enhanced error handling
+- **RichKid.API** - RESTful Web API backend with JWT authentication and detailed logging
+- **RichKid.Web** - MVC frontend application with enhanced error handling and request tracking
 - **RichKid.Shared** - Shared library containing models, DTOs, and service interfaces
 
 ## ✨ Features
@@ -42,7 +42,58 @@ The solution consists of three main projects:
 - **Configuration-based API endpoints** - All API URLs stored in `appsettings.json` for easy maintenance
 - **Improved response validation** - Comprehensive HTTP status code handling
 - **Better exception management** - User-friendly error messages instead of technical jargon
-- **Enhanced logging** - Detailed console logging for debugging and monitoring
+- **Comprehensive ASP.NET Core logging** - Detailed monitoring and debugging capabilities
+
+## 📊 Logging & Monitoring
+
+### Comprehensive Logging System
+The application features a robust logging system that provides complete visibility into all operations:
+
+#### **Startup & Configuration Logging**
+- Service initialization tracking
+- Configuration validation
+- Environment-specific setup
+- Database file path verification
+
+#### **Authentication Flow Logging**
+- Login attempts with usernames and IP addresses
+- JWT token creation and validation events
+- Session management activities
+- Permission checks and authorization decisions
+
+#### **User Operation Logging**
+- All CRUD operations with user context
+- Username conflict detection
+- Data validation results
+- Permission enforcement tracking
+
+#### **HTTP Request Tracking**
+- Complete request/response lifecycle
+- Request timing and performance metrics
+- User context for each operation
+- Error response details
+
+#### **Data Layer Logging**
+- File I/O operations
+- JSON serialization/deserialization
+- Data integrity checks
+- User statistics and analytics
+
+### **Log Levels & Categories**
+- **Debug** (Technical Details): Service initialization, variable values, detailed flow
+- **Information** (Normal Operations): User actions, successful operations, system events
+- **Warning** (Attention Required): Failed attempts, validation errors, retries
+- **Error** (Issues): Exceptions, system errors, critical failures
+
+### **Log Output Examples**
+```
+[2025-07-12 16:12:15] RichKid API starting up in Development mode
+[2025-07-12 16:12:15] JWT Issuer configured as: RichKidAPI
+[2025-07-12 16:12:15] Login attempt started for username: Rotem from IP: ::1
+[2025-07-12 16:12:15] Authentication successful for user: Rotem
+[2025-07-12 16:12:15] User created successfully: NewUser (ID: 7) by User ID: 5
+[2025-07-12 16:12:15] HTTP GET /User completed with 200 in 145ms for User ID: 5
+```
 
 ## 🚀 Getting Started
 
@@ -107,6 +158,7 @@ The solution consists of three main projects:
 6. **Access the application**
    - Open your browser and navigate to `https://localhost:7143`
    - Use the test credentials below
+   - Monitor console outputs for detailed logging information
 
 ## 🔐 Test Users
 
@@ -159,10 +211,17 @@ The web application uses configurable endpoints defined in `appsettings.json`. T
 - Flexible API endpoint management
 - Centralized configuration maintenance
 
+### Logging Configuration
+The logging system is highly configurable through `Program.cs`:
+- **Console Logging**: Timestamped output with scope information
+- **Debug Logging**: Visual Studio integration for development
+- **Filtered Logging**: Reduced noise from framework components
+- **Structured Logging**: Searchable parameters and context
+
 ### Error Handling
 The application features comprehensive error handling with:
 - User-friendly messages for common scenarios
-- Detailed logging for debugging
+- Detailed logging for debugging and monitoring
 - Graceful degradation when services are unavailable
 - Proper HTTP status code handling
 
@@ -173,15 +232,49 @@ When running in development mode, Swagger UI is available at:
 
 The Swagger UI includes JWT Bearer token authentication support.
 
-## 🐛 Troubleshooting
+## 🐛 Troubleshooting & Monitoring
 
 ### Debug Information
-The application provides detailed console logging for debugging:
-- Authentication flow tracking
-- API request/response logging
-- Error detection and handling
-- User action validation
+The application provides detailed console logging for debugging and monitoring:
+
+#### **Real-time Monitoring**
+- Authentication flow tracking with success/failure reasons
+- API request/response logging with timing information
+- User action validation and permission checks
+- Data operation success/failure tracking
+
+#### **Performance Metrics**
+- HTTP request duration timing
+- Database operation performance
+- Service method execution time
+- Resource usage patterns
+
+#### **Security Auditing**
+- Login attempts and outcomes
+- Permission violations and access attempts
+- Session management events
+- JWT token validation results
+
+#### **Data Integrity**
+- File I/O operation success/failure
+- JSON parsing validation
+- User data validation results
+- Conflict detection and resolution
+
+### **Log Monitoring Tips**
+1. **Watch console outputs** in both API and Web terminals
+2. **Filter logs by level** (Debug, Info, Warning, Error)
+3. **Track user operations** by User ID in log messages
+4. **Monitor timing** for performance optimization
+5. **Check error patterns** for system health
+
+### **Common Troubleshooting Scenarios**
+- **Authentication Issues**: Check JWT configuration and user credentials in logs
+- **Permission Errors**: Review authorization logs for role assignments
+- **API Communication**: Monitor HTTP request/response cycles
+- **Data Problems**: Examine file I/O and JSON parsing logs
+- **Performance Issues**: Analyze request timing and operation duration
 
 ---
 
-For questions or support, please check the code documentation or create an issue in the repository.
+For questions or support, please check the code documentation, review the detailed console logs, or create an issue in the repository.
