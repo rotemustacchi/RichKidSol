@@ -19,16 +19,16 @@ namespace RichKid.Web.Filters
 
             if (!_allowedGroups.Contains(groupId))
             {
-                // מנקה סשן, אם תרצה:
+                // Optionally clear the session (e.g. to fully reset user context)
                 // context.HttpContext.Session.Clear();
 
-                // מגדירים הודעה שתוצג ב-Login
+                // Set a TempData error message to be displayed on the login page
                 if (context.Controller is Controller c)
                 {
-                    c.TempData["AuthError"] = "אין לך קבוצת שייכות, אנא פנה למנהל";
+                    c.TempData["AuthError"] = "You do not have the required group permissions. Please contact the administrator.";
                 }
 
-                // מפנים למסך ה-Login
+                // Redirect the user to the Login page
                 context.Result = new RedirectToActionResult("Login", "Auth", null);
                 return;
             }

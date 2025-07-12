@@ -6,31 +6,32 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using RichKid.Shared.Models;
+using RichKid.Shared.Services;
 using Microsoft.AspNetCore.Http;
 
 namespace RichKid.Web.Services
 {
-    public interface IUserService
-    {
-        Task<List<User>> GetAllUsersAsync();
-        Task AddUserAsync(User user);
-        Task DeleteUserAsync(int id);
-        Task UpdateUserAsync(User updatedUser);
-        Task<User?> GetUserByIdAsync(int id);
-        Task<List<User>> SearchByFullNameAsync(string firstName, string lastName);
-    }
-
+    // Implementing the shared interface from RichKid.Shared.Services
     public class UserService : IUserService
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
+        // Get endpoints from config instead of hardcoding throughout the class
+        private readonly string _usersEndpoint;
+        private readonly string _userByIdEndpoint;
+        private readonly string _usersSearchEndpoint;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
-            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api";
             _httpContextAccessor = httpContextAccessor;
+            
+            // Load all API endpoint configurations from appsettings
+            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api";
+            _usersEndpoint = configuration["ApiSettings:Endpoints:Users:Base"] ?? "/users";
+            _userByIdEndpoint = configuration["ApiSettings:Endpoints:Users:GetById"] ?? "/users/{0}";
+            _usersSearchEndpoint = configuration["ApiSettings:Endpoints:Users:Search"] ?? "/users/search";
         }
 
         private void AddAuthHeader()
@@ -43,300 +44,487 @@ namespace RichKid.Web.Services
             
             if (!string.IsNullOrEmpty(token))
             {
-                // Clear any existing authorization header first
+                // Clear existing header first to avoid conflicts
                 _httpClient.DefaultRequestHeaders.Authorization = null;
-                // Set the new one
+                // Set the bearer token for API authentication
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 Console.WriteLine($"Authorization header set successfully");
             }
             else
             {
-                Console.WriteLine($"No token found - not setting auth header");
+                Console.WriteLine($"No token found - request will go without auth");
             }
         }
 
-        public async Task<List<User>> GetAllUsersAsync()
+        private void ValidateResponse(HttpResponseMessage response, string operation)
+        {
+            if (response.IsSuccessStatusCode)
+                return; // All good, nothing to validate
+
+            Console.WriteLine($"HTTP Error in {operation}: {response.StatusCode}");
+            
+            // Handle different error types with user-friendly messages
+            switch (response.StatusCode)
+            {
+                case System.Net.HttpStatusCode.Unauthorized:
+                    Console.WriteLine($"Session expired in {operation}");
+                    throw new UnauthorizedAccessException("Your session has expired. Please log in again to continue.");
+                
+                case System.Net.HttpStatusCode.Forbidden:
+                    Console.WriteLine($"Permission denied in {operation}");
+                    throw new UnauthorizedAccessException("You don't have permission to perform this action. Please contact your administrator if you think this is an error.");
+                
+                case System.Net.HttpStatusCode.NotFound:
+                    Console.WriteLine($"Resource not found in {operation}");
+                    throw new ArgumentException("The requested information could not be found. It may have been deleted or moved.");
+                
+                case System.Net.HttpStatusCode.BadRequest:
+                    // Try to get the specific error message from API
+                    var errorContent = response.Content.ReadAsStringAsync().Result;
+                    Console.WriteLine($"Bad request error content: {errorContent}");
+                    
+                    // Handle username already exists specifically
+                    if (!string.IsNullOrWhiteSpace(errorContent) && 
+                        (errorContent.Contains("Username already exists") || errorContent.Contains("already exists")))
+                    {
+                        var cleanError = errorContent.Trim('"');
+                        Console.WriteLine($"Username conflict detected: {cleanError}");
+                        throw new HttpRequestException(cleanError);
+                    }
+                    
+                    var cleanBadRequestError = string.IsNullOrWhiteSpace(errorContent) ? 
+                        "There was a problem with your request. Please check your information and try again." : 
+                        errorContent.Trim('"');
+                    Console.WriteLine($"Bad request in {operation}: {cleanBadRequestError}");
+                    throw new HttpRequestException(cleanBadRequestError);
+                
+                case System.Net.HttpStatusCode.InternalServerError:
+                    Console.WriteLine($"Server error in {operation}");
+                    throw new HttpRequestException("Something went wrong on our end. Please try again in a few moments.");
+                
+                case System.Net.HttpStatusCode.ServiceUnavailable:
+                    Console.WriteLine($"Service unavailable in {operation}");
+                    throw new HttpRequestException("The service is temporarily unavailable. Please try again later.");
+                
+                default:
+                    // Generic handler for other errors
+                    var generalError = response.Content.ReadAsStringAsync().Result;
+                    var errorMessage = string.IsNullOrWhiteSpace(generalError) ? 
+                        "An unexpected error occurred. Please try again or contact support if the problem continues." : 
+                        generalError.Trim('"');
+                    Console.WriteLine($"HTTP error in {operation}: {errorMessage}");
+                    throw new HttpRequestException(errorMessage);
+            }
+        }
+
+        // Implementing shared interface methods
+        public List<User> GetAllUsers()
         {
             try
             {
-                Console.WriteLine($"=== UserService.GetAllUsersAsync START ===");
+                Console.WriteLine($"=== UserService.GetAllUsers START ===");
                 Console.WriteLine($"Base URL: {_baseUrl}");
+                Console.WriteLine($"Users endpoint: {_usersEndpoint}");
                 
-                AddAuthHeader();
+                AddAuthHeader(); // Make sure we're authenticated
                 
-                Console.WriteLine($"Making GET request to: {_baseUrl}/users");
-                var response = await _httpClient.GetAsync($"{_baseUrl}/users");
+                // Build full URL using config endpoint
+                var fullUrl = $"{_baseUrl}{_usersEndpoint}";
+                Console.WriteLine($"Making GET request to: {fullUrl}");
+                
+                var response = _httpClient.GetAsync(fullUrl).Result;
                 
                 Console.WriteLine($"Response Status: {response.StatusCode}");
                 Console.WriteLine($"Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
                 
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    Console.WriteLine($"Unauthorized response - session may have expired");
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
-                }
+                // Check if response is valid before trying to read it
+                ValidateResponse(response, "GetAllUsers");
                 
-                response.EnsureSuccessStatusCode();
-                
-                var json = await response.Content.ReadAsStringAsync();
+                var json = response.Content.ReadAsStringAsync().Result;
                 Console.WriteLine($"Response JSON length: {json?.Length ?? 0}");
                 Console.WriteLine($"Response JSON (first 200 chars): {(string.IsNullOrEmpty(json) ? "EMPTY" : json.Substring(0, Math.Min(200, json.Length)))}");
                 
+                // Handle empty responses gracefully
                 if (string.IsNullOrEmpty(json))
                 {
-                    Console.WriteLine($"Empty JSON response - returning empty list");
+                    Console.WriteLine($"Empty response - returning empty list");
                     return new List<User>();
                 }
                 
-                var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
-                { 
-                    PropertyNameCaseInsensitive = true 
-                });
-                
-                Console.WriteLine($"Deserialized {users?.Count ?? 0} users");
-                Console.WriteLine($"=== UserService.GetAllUsersAsync END ===");
-                
-                return users ?? new List<User>();
+                try
+                {
+                    var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+                    
+                    Console.WriteLine($"Successfully got {users?.Count ?? 0} users");
+                    Console.WriteLine($"=== UserService.GetAllUsers END ===");
+                    
+                    return users ?? new List<User>();
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"JSON parsing failed: {ex.Message}");
+                    throw new Exception("Invalid response format from server", ex);
+                }
             }
-            catch (HttpRequestException ex)
+            catch (UnauthorizedAccessException)
             {
-                Console.WriteLine($"HttpRequestException: {ex.Message}");
-                throw new Exception($"Error fetching users: {ex.Message}", ex);
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
+            catch (HttpRequestException)
+            {
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"General Exception: {ex.GetType().Name} - {ex.Message}");
-                throw;
+                Console.WriteLine($"Unexpected error in GetAllUsers: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We're having trouble loading the user list. Please refresh the page or try again later.", ex);
             }
         }
 
-        public async Task AddUserAsync(User user)
+        public void AddUser(User user)
         {
             try
             {
-                AddAuthHeader();
+                // Basic validation before making the request
+                if (user == null)
+                {
+                    throw new ArgumentNullException(nameof(user), "User object cannot be null");
+                }
+
+                AddAuthHeader(); // Make sure we have auth token
                 
                 var json = JsonSerializer.Serialize(user);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                Console.WriteLine($"=== UserService.AddUserAsync ===");
-                Console.WriteLine($"Sending request to: {_baseUrl}/users");
+                Console.WriteLine($"=== UserService.AddUser ===");
+                // Use config endpoint instead of hardcoded URL
+                var fullUrl = $"{_baseUrl}{_usersEndpoint}";
+                Console.WriteLine($"Sending POST request to: {fullUrl}");
                 Console.WriteLine($"Request JSON: {json}");
                 
-                var response = await _httpClient.PostAsync($"{_baseUrl}/users", content);
+                var response = _httpClient.PostAsync(fullUrl, content).Result;
                 
                 Console.WriteLine($"Response Status: {response.StatusCode}");
                 
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
-                }
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    // Read the error response body to get the actual error message
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Error response content: {errorContent}");
-                    
-                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                    {
-                        // Try to parse the error message from the API response
-                        if (!string.IsNullOrEmpty(errorContent))
-                        {
-                            // Clean up the error message - remove quotes if it's a JSON string
-                            var cleanError = errorContent.Trim('"');
-                            
-                            // The API now returns clean error messages
-                            if (cleanError.Contains("Username already exists"))
-                            {
-                                throw new HttpRequestException("Username already exists in the system");
-                            }
-                            else
-                            {
-                                // Use the clean error message directly
-                                throw new HttpRequestException(cleanError);
-                            }
-                        }
-                        else
-                        {
-                            throw new HttpRequestException("The server could not process the request");
-                        }
-                    }
-                    
-                    // For other HTTP error codes
-                    throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {errorContent}");
-                }
+                // Check if the request was successful
+                ValidateResponse(response, "AddUser");
                 
                 Console.WriteLine("User added successfully");
             }
+            catch (ArgumentNullException)
+            {
+                throw new ArgumentNullException("User information is required. Please fill out the form completely.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
             catch (HttpRequestException)
             {
-                // Re-throw HttpRequestException as-is (these contain our custom messages)
-                throw;
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"General Exception in AddUserAsync: {ex.GetType().Name} - {ex.Message}");
-                throw new Exception($"Error adding user: {ex.Message}", ex);
+                Console.WriteLine($"Unexpected error in AddUser: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We couldn't create the new user. Please check your information and try again.", ex);
             }
         }
 
-        public async Task DeleteUserAsync(int id)
+        public void DeleteUser(int id)
         {
             try
             {
-                AddAuthHeader();
-                
-                var response = await _httpClient.DeleteAsync($"{_baseUrl}/users/{id}");
-                
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                // Make sure we have a valid ID
+                if (id <= 0)
                 {
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
+                    throw new ArgumentException("User ID must be a positive number", nameof(id));
                 }
+
+                AddAuthHeader(); // Set up authentication
                 
-                response.EnsureSuccessStatusCode();
+                // Build URL with user ID using config endpoint pattern
+                var deleteEndpoint = string.Format(_userByIdEndpoint, id);
+                var fullUrl = $"{_baseUrl}{deleteEndpoint}";
+                
+                Console.WriteLine($"=== UserService.DeleteUser ===");
+                Console.WriteLine($"Sending DELETE request to: {fullUrl}");
+                
+                var response = _httpClient.DeleteAsync(fullUrl).Result;
+                
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                
+                // Validate the response
+                ValidateResponse(response, "DeleteUser");
+                
+                Console.WriteLine("User deleted successfully");
             }
-            catch (HttpRequestException ex)
+            catch (ArgumentException)
             {
-                throw new Exception($"Error deleting user: {ex.Message}", ex);
+                throw new ArgumentException("Please select a valid user to delete.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
+            catch (HttpRequestException)
+            {
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error in DeleteUser: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We couldn't delete the user. Please try again or contact support if the problem continues.", ex);
             }
         }
 
-        public async Task UpdateUserAsync(User updatedUser)
+        public void UpdateUser(User updatedUser)
         {
             try
             {
-                AddAuthHeader();
+                // Validate input
+                if (updatedUser == null)
+                {
+                    throw new ArgumentNullException(nameof(updatedUser), "User object cannot be null");
+                }
+
+                if (updatedUser.UserID <= 0)
+                {
+                    throw new ArgumentException("User ID must be a positive number", nameof(updatedUser));
+                }
+
+                AddAuthHeader(); // Set up authentication
                 
                 var json = JsonSerializer.Serialize(updatedUser);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                Console.WriteLine($"=== UserService.UpdateUserAsync ===");
-                Console.WriteLine($"Sending request to: {_baseUrl}/users/{updatedUser.UserID}");
+                Console.WriteLine($"=== UserService.UpdateUser ===");
                 
-                var response = await _httpClient.PutAsync($"{_baseUrl}/users/{updatedUser.UserID}", content);
+                // Build URL with user ID using config endpoint
+                var updateEndpoint = string.Format(_userByIdEndpoint, updatedUser.UserID);
+                var fullUrl = $"{_baseUrl}{updateEndpoint}";
+                Console.WriteLine($"Sending PUT request to: {fullUrl}");
+                
+                var response = _httpClient.PutAsync(fullUrl, content).Result;
                 
                 Console.WriteLine($"Response Status: {response.StatusCode}");
                 
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
-                }
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    // Read the error response body to get the actual error message
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Error response content: {errorContent}");
-                    
-                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                    {
-                        if (!string.IsNullOrEmpty(errorContent))
-                        {
-                            // Clean up the error message - remove quotes if it's a JSON string
-                            var cleanError = errorContent.Trim('"');
-                            
-                            if (cleanError.Contains("Username already exists"))
-                            {
-                                throw new HttpRequestException("Username already exists in the system");
-                            }
-                            else
-                            {
-                                throw new HttpRequestException(cleanError);
-                            }
-                        }
-                        else
-                        {
-                            throw new HttpRequestException("The server could not process the request");
-                        }
-                    }
-                    
-                    throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {errorContent}");
-                }
+                // Check if update was successful
+                ValidateResponse(response, "UpdateUser");
                 
                 Console.WriteLine("User updated successfully");
             }
+            catch (ArgumentNullException)
+            {
+                throw new ArgumentNullException("User information is required. Please fill out the form completely.");
+            }
+            catch (ArgumentException)
+            {
+                throw new ArgumentException("Please select a valid user to update.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
             catch (HttpRequestException)
             {
-                // Re-throw HttpRequestException as-is
-                throw;
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"General Exception in UpdateUserAsync: {ex.GetType().Name} - {ex.Message}");
-                throw new Exception($"Error updating user: {ex.Message}", ex);
+                Console.WriteLine($"Unexpected error in UpdateUser: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We couldn't save the changes. Please check your information and try again.", ex);
             }
+        }
+
+        public User? GetUserById(int id)
+        {
+            try
+            {
+                // Validate ID first
+                if (id <= 0)
+                {
+                    throw new ArgumentException("User ID must be a positive number", nameof(id));
+                }
+
+                AddAuthHeader(); // Set up authentication
+                
+                // Build URL with user ID using config endpoint
+                var getUserEndpoint = string.Format(_userByIdEndpoint, id);
+                var fullUrl = $"{_baseUrl}{getUserEndpoint}";
+                
+                Console.WriteLine($"=== UserService.GetUserById ===");
+                Console.WriteLine($"Sending GET request to: {fullUrl}");
+                
+                var response = _httpClient.GetAsync(fullUrl).Result;
+                
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                
+                // 404 is valid - user just doesn't exist
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    Console.WriteLine("User not found - returning null");
+                    return null;
+                }
+                
+                // Check other response statuses
+                ValidateResponse(response, "GetUserById");
+                
+                var json = response.Content.ReadAsStringAsync().Result;
+                
+                if (string.IsNullOrEmpty(json))
+                {
+                    Console.WriteLine("Empty response - returning null");
+                    return null;
+                }
+                
+                try
+                {
+                    var user = JsonSerializer.Deserialize<User>(json, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+                    
+                    Console.WriteLine($"Successfully got user: {user?.UserName ?? "null"}");
+                    return user;
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"JSON parsing failed: {ex.Message}");
+                    throw new Exception("Invalid response format from server", ex);
+                }
+            }
+            catch (ArgumentException)
+            {
+                throw new ArgumentException("Please select a valid user to view.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
+            catch (HttpRequestException)
+            {
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error in GetUserById: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We couldn't load the user information. Please try again.", ex);
+            }
+        }
+
+        public List<User> SearchByFullName(string first, string last)
+        {
+            try
+            {
+                // Need at least one name to search
+                if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(last))
+                {
+                    throw new ArgumentException("At least one name parameter must be provided");
+                }
+
+                AddAuthHeader(); // Set up authentication
+                
+                // Build query string from provided parameters
+                var queryParams = new List<string>();
+                if (!string.IsNullOrWhiteSpace(first))
+                    queryParams.Add($"firstName={Uri.EscapeDataString(first)}");
+                if (!string.IsNullOrWhiteSpace(last))
+                    queryParams.Add($"lastName={Uri.EscapeDataString(last)}");
+                
+                var queryString = string.Join("&", queryParams);
+                var fullUrl = $"{_baseUrl}{_usersSearchEndpoint}?{queryString}"; // Using config endpoint
+                
+                Console.WriteLine($"=== UserService.SearchByFullName ===");
+                Console.WriteLine($"Sending GET request to: {fullUrl}");
+                
+                var response = _httpClient.GetAsync(fullUrl).Result;
+                
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                
+                // Validate the response
+                ValidateResponse(response, "SearchUsers");
+                
+                var json = response.Content.ReadAsStringAsync().Result;
+                
+                if (string.IsNullOrEmpty(json))
+                {
+                    Console.WriteLine("Empty search results - returning empty list");
+                    return new List<User>();
+                }
+                
+                try
+                {
+                    var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true 
+                    });
+                    
+                    Console.WriteLine($"Search found {users?.Count ?? 0} users");
+                    return users ?? new List<User>();
+                }
+                catch (JsonException ex)
+                {
+                    Console.WriteLine($"JSON parsing failed in search: {ex.Message}");
+                    throw new Exception("Invalid response format from server", ex);
+                }
+            }
+            catch (ArgumentException)
+            {
+                throw new ArgumentException("Please enter at least a first name or last name to search.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Let auth errors bubble up - these are already user-friendly
+            }
+            catch (HttpRequestException)
+            {
+                throw; // Let HTTP errors bubble up - these now have user-friendly messages
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error in SearchUsers: {ex.GetType().Name} - {ex.Message}");
+                throw new Exception("We couldn't search for users right now. Please try again later.", ex);
+            }
+        }
+
+        // Additional async methods for better performance in web scenarios
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            return GetAllUsers();
+        }
+
+        public async Task AddUserAsync(User user)
+        {
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            AddUser(user);
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            DeleteUser(id);
+        }
+
+        public async Task UpdateUserAsync(User updatedUser)
+        {
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            UpdateUser(updatedUser);
         }
 
         public async Task<User?> GetUserByIdAsync(int id)
         {
-            try
-            {
-                AddAuthHeader();
-                
-                var response = await _httpClient.GetAsync($"{_baseUrl}/users/{id}");
-                
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    return null;
-                
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
-                }
-                
-                response.EnsureSuccessStatusCode();
-                
-                var json = await response.Content.ReadAsStringAsync();
-                
-                if (string.IsNullOrEmpty(json))
-                    return null;
-                
-                var user = JsonSerializer.Deserialize<User>(json, new JsonSerializerOptions 
-                { 
-                    PropertyNameCaseInsensitive = true 
-                });
-                
-                return user;
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error fetching user by ID: {ex.Message}", ex);
-            }
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            return GetUserById(id);
         }
 
         public async Task<List<User>> SearchByFullNameAsync(string firstName, string lastName)
         {
-            try
-            {
-                AddAuthHeader();
-                
-                var response = await _httpClient.GetAsync($"{_baseUrl}/users/search?firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}");
-                
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException("Session expired. Please login again.");
-                }
-                
-                response.EnsureSuccessStatusCode();
-                
-                var json = await response.Content.ReadAsStringAsync();
-                
-                if (string.IsNullOrEmpty(json))
-                {
-                    return new List<User>();
-                }
-                
-                var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
-                { 
-                    PropertyNameCaseInsensitive = true 
-                });
-                
-                return users ?? new List<User>();
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error searching users: {ex.Message}", ex);
-            }
+            // Call the synchronous method directly to avoid Task.Run wrapping exceptions
+            return SearchByFullName(firstName, lastName);
         }
     }
 }

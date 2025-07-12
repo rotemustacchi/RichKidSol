@@ -1,4 +1,5 @@
 using RichKid.Web.Services;
+using RichKid.Shared.Services; // Added this to use shared interfaces
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,8 +31,8 @@ builder.Services.AddHttpContextAccessor();
 // 4. Add MVC services
 builder.Services.AddControllersWithViews();
 
-// 5. Register HttpClient for API communication
-builder.Services.AddHttpClient<IUserService, UserService>(client =>
+// 5. Register HttpClient for UserService communication with API
+builder.Services.AddHttpClient<UserService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("User-Agent", "RichKid.Web/1.0");
@@ -41,13 +42,14 @@ builder.Services.AddHttpClient<IUserService, UserService>(client =>
     var handler = new HttpClientHandler();
     if (builder.Environment.IsDevelopment())
     {
+        // Allow self-signed certificates in development
         handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
     }
     return handler;
 });
 
 // 6. Register HttpClient for Auth service
-builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
+builder.Services.AddHttpClient<AuthService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("User-Agent", "RichKid.Web/1.0");
@@ -57,14 +59,15 @@ builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
     var handler = new HttpClientHandler();
     if (builder.Environment.IsDevelopment())
     {
+        // Allow self-signed certificates in development
         handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
     }
     return handler;
 });
 
-// 7. Register services with dependency injection
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+// 7. Register services with dependency injection using shared interfaces
+builder.Services.AddScoped<IUserService, UserService>(); // Using shared interface
+builder.Services.AddScoped<RichKid.Shared.Services.IAuthService, AuthService>(); // Using shared interface
 
 var app = builder.Build();
 

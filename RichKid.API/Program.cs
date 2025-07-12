@@ -107,7 +107,7 @@ else
 
 app.UseCors("AllowWeb");
 
-app.UseAuthentication();   // Must be before UseAuthorization()
+app.UseAuthentication();   
 app.UseAuthorization();
 
 app.MapControllers();

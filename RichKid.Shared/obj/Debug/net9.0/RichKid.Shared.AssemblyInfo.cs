@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RichKid.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0f2ae6dbf8a5e652535acc1ced8e894b712c024c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e10d83a866ada6456809e7a3bd90dab3855aa73")]
 [assembly: System.Reflection.AssemblyProductAttribute("RichKid.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RichKid.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

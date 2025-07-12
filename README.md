@@ -7,7 +7,7 @@ A full-stack .NET application for user management with JWT-based authentication 
 The solution consists of three main projects:
 
 - **RichKid.API** - RESTful Web API backend with JWT authentication
-- **RichKid.Web** - MVC frontend application
+- **RichKid.Web** - MVC frontend application with enhanced error handling
 - **RichKid.Shared** - Shared library containing models, DTOs, and service interfaces
 
 ## ✨ Features
@@ -26,16 +26,23 @@ The solution consists of three main projects:
 - User search and filtering by name, email, or phone
 - Active/inactive status management
 - Comprehensive user data including contact information
-- **User-friendly validation** with English error messages
+- **Enhanced user-friendly validation** with clear English error messages
+- **Smart duplicate detection** - prevents username conflicts with helpful messages
 - **Simple password requirements** (minimum 4 characters)
 
 ### Security Features
 - **JWT token-based authentication** with role claims
 - **Cookie authentication** for web sessions
-- **Detailed error handling** with specific login failure messages
+- **Enhanced error handling** with user-friendly messages throughout the application
 - **Session management** with automatic timeout
 - **CORS protection** configured for web domain
-- **Input validation** with clean error messages
+- **Robust input validation** with specific error feedback
+
+### Technical Improvements
+- **Configuration-based API endpoints** - All API URLs stored in `appsettings.json` for easy maintenance
+- **Improved response validation** - Comprehensive HTTP status code handling
+- **Better exception management** - User-friendly error messages instead of technical jargon
+- **Enhanced logging** - Detailed console logging for debugging and monitoring
 
 ## 🚀 Getting Started
 
@@ -62,7 +69,26 @@ The solution consists of three main projects:
    dotnet build
    ```
 
-4. **Run the applications**
+4. **Configure API endpoints (Optional)**
+   
+   You can customize API endpoints in `RichKid.Web/appsettings.json`:
+   ```json
+   {
+     "ApiSettings": {
+       "BaseUrl": "http://localhost:5270/api",
+       "Endpoints": {
+         "Auth": { "Login": "/auth/login" },
+         "Users": {
+           "Base": "/users",
+           "GetById": "/users/{0}",
+           "Search": "/users/search"
+         }
+       }
+     }
+   }
+   ```
+
+5. **Run the applications**
 
    **Start the API (Terminal 1):**
    ```bash
@@ -78,7 +104,7 @@ The solution consists of three main projects:
    ```
    Web app will run on `https://localhost:7143`
 
-5. **Access the application**
+6. **Access the application**
    - Open your browser and navigate to `https://localhost:7143`
    - Use the test credentials below
 
@@ -94,10 +120,13 @@ The system comes with pre-configured test users in `Users.json`:
 | Tuval | 1234 | 3 | Regular User | Active ✅ |
 | CharliBrown | 33333333 | 4 | View Only | Inactive ❌ |
 
-### Login Error Messages:
+### User-Friendly Error Messages:
 - **Invalid username**: "Username not found"
 - **Wrong password**: "Incorrect password"
 - **Inactive account**: "Account is inactive. Please contact an administrator"
+- **Username conflict**: "This username is already taken. Please choose a different username."
+- **Session expired**: "Your session has expired. Please log in again to continue."
+- **Permission denied**: "You don't have permission to perform this action. Please contact your administrator if you think this is an error."
 
 ## 🔌 API Endpoints
 
@@ -122,12 +151,36 @@ The system comes with pre-configured test users in `Users.json`:
 | Edit Own Profile | ✅ | ✅ | ✅ | ✅ |
 | Delete User | ✅ | ❌ | ❌ | ❌ |
 
+## 🔧 Configuration
+
+### API Settings
+The web application uses configurable endpoints defined in `appsettings.json`. This allows for:
+- Easy environment switching (development, staging, production)
+- Flexible API endpoint management
+- Centralized configuration maintenance
+
+### Error Handling
+The application features comprehensive error handling with:
+- User-friendly messages for common scenarios
+- Detailed logging for debugging
+- Graceful degradation when services are unavailable
+- Proper HTTP status code handling
+
 ## 🔍 API Documentation
 
 When running in development mode, Swagger UI is available at:
 `http://localhost:5270/swagger`
 
 The Swagger UI includes JWT Bearer token authentication support.
+
+## 🐛 Troubleshooting
+
+### Debug Information
+The application provides detailed console logging for debugging:
+- Authentication flow tracking
+- API request/response logging
+- Error detection and handling
+- User action validation
 
 ---
 

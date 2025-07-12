@@ -72,7 +72,7 @@
     },
     {
       "UserID": 6,
-      "Active": true,
+      "Active": false,
       "UserName": "Tuval",
       "Password": "1234",
       "UserGroupID": 3,
