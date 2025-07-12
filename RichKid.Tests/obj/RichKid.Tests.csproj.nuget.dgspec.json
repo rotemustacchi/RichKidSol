@@ -1,0 +1,352 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Tests\\RichKid.Tests.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\RichKid.API.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\RichKid.API.csproj",
+        "projectName": "RichKid.API",
+        "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\RichKid.API.csproj",
+        "packagesPath": "C:\\Users\\rotem\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\rotem\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj": {
+                "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj",
+        "projectName": "RichKid.Shared",
+        "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj",
+        "packagesPath": "C:\\Users\\rotem\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\rotem\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Tests\\RichKid.Tests.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Tests\\RichKid.Tests.csproj",
+        "projectName": "RichKid.Tests",
+        "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Tests\\RichKid.Tests.csproj",
+        "packagesPath": "C:\\Users\\rotem\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Tests\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\rotem\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\RichKid.API.csproj": {
+                "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.API\\RichKid.API.csproj"
+              },
+              "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj": {
+                "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj"
+              },
+              "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\RichKid.Web.csproj": {
+                "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\RichKid.Web.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Mvc.Testing": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.EntityFrameworkCore.InMemory": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.Extensions.Http": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.Extensions.Logging": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.NET.Test.Sdk": {
+              "target": "Package",
+              "version": "[17.8.0, )"
+            },
+            "Moq": {
+              "target": "Package",
+              "version": "[4.20.69, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.12.1, )"
+            },
+            "System.Text.Json": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "xunit": {
+              "target": "Package",
+              "version": "[2.6.2, )"
+            },
+            "xunit.runner.visualstudio": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[2.5.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\RichKid.Web.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\RichKid.Web.csproj",
+        "projectName": "RichKid.Web",
+        "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\RichKid.Web.csproj",
+        "packagesPath": "C:\\Users\\rotem\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Web\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\rotem\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj": {
+                "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.EntityFrameworkCore.Analyzers": {
+              "target": "Package",
+              "version": "[9.0.7, )"
+            },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[8.12.1, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.12.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

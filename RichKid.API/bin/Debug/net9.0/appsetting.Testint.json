@@ -1,0 +1,38 @@
+{
+  
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
+      "RichKid": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "Jwt": {
+    "Key": "ThisIsAReallyStrongSecretKey1234!",
+    "Issuer": "RichKidAPI",
+    "Audience": "RichKidClients",
+    "DurationInMinutes": 15
+  },
+  
+  "ApiSettings": {
+    "BaseUrl": "http://localhost/api",
+    "Endpoints": {
+      "Auth": {
+        "Login": "/auth/login"
+      },
+      "Users": {
+        "Base": "/users",
+        "GetById": "/users/{0}",
+        "Search": "/users/search",
+        "Delete": "/users/{0}",
+        "Update": "/users/{0}"
+      }
+    },
+    "Timeouts": {
+      "DefaultTimeoutSeconds": 10,
+      "LoginTimeoutSeconds": 5
+    }
+  }
+}

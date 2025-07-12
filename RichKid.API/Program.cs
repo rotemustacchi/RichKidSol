@@ -193,3 +193,5 @@ logger.LogInformation("RichKid API is ready to accept requests on {Urls}",
     string.Join(", ", app.Urls));
 
 app.Run();
+
+public partial class Program { }

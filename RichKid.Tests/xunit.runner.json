@@ -1,0 +1,15 @@
+{
+  "parallelizeTestCollections": true,
+  
+  "maxParallelThreads": 4,
+  
+  "methodDisplay": "method",
+  
+  "diagnosticMessages": false,
+  
+  "shadowCopy": false,
+  
+  "stopOnFail": false,
+  
+  "preEnumerateTheories": true
+}

@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Target the same .NET version as our main application -->
+    <TargetFramework>net9.0</TargetFramework>
+    <!-- Enable implicit using statements for cleaner code -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Enable nullable reference types for better null safety -->
+    <Nullable>enable</Nullable>
+
+    <!-- This is a test project, not meant to be packaged for distribution -->
+    <IsPackable>false</IsPackable>
+    <!-- Enable test discovery in Visual Studio and other test runners -->
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core testing framework packages -->
+    
+    <!-- Microsoft Test SDK - provides the test runner and infrastructure -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    
+    <!-- xUnit - widely used testing framework for .NET, provides [Fact] and [Theory] attributes -->
+    <PackageReference Include="xunit" Version="2.6.2" />
+    
+    <!-- xUnit Visual Studio runner - enables running tests in Visual Studio -->
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    
+    <!-- Moq - mocking framework for creating fake dependencies in unit tests -->
+    <!-- This allows us to isolate the code we're testing from external dependencies -->
+    <PackageReference Include="Moq" Version="4.20.69" />
+    
+    <!-- ASP.NET Core Testing - provides WebApplicationFactory for integration testing -->
+    <!-- This allows us to test our entire API end-to-end without deploying it -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.7" />
+    
+    <!-- Entity Framework In-Memory - creates temporary databases for testing -->
+    <!-- Even though we use file storage, this is useful for future database tests -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.7" />
+    
+    <!-- JWT token handling - needed for testing authentication scenarios -->
+    <!-- Allows us to create and validate JWT tokens in our tests -->
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.12.1" />
+    
+    <!-- HTTP client factory - for testing API calls and HTTP communication -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
+    
+    <!-- JSON serialization - for handling API request/response data in tests -->
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    
+    <!-- Logging extensions - for capturing and verifying log output in tests -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference our main projects so we can test them -->
+    <!-- This allows tests to access all the classes and services from our application -->
+    
+    <!-- Reference the API project to test controllers and services -->
+    <ProjectReference Include="..\RichKid.API\RichKid.API.csproj" />
+    
+    <!-- Reference the Web project to test MVC controllers and web services -->
+    <ProjectReference Include="..\RichKid.Web\RichKid.Web.csproj" />
+    
+    <!-- Reference the Shared project to test models and shared services -->
+    <ProjectReference Include="..\RichKid.Shared\RichKid.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
