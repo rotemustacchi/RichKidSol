@@ -5,7 +5,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using RichKid.Web.Models;
+using RichKid.Shared.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace RichKid.Web.Services
@@ -29,17 +29,29 @@ namespace RichKid.Web.Services
         public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
-            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api"; // default to local dev server
+            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api";
             _httpContextAccessor = httpContextAccessor;
         }
 
         private void AddAuthHeader()
         {
-            // grab the auth token from session and add to request headers
             var token = _httpContextAccessor.HttpContext?.Session.GetString("AuthToken");
+            
+            Console.WriteLine($"=== UserService.AddAuthHeader ===");
+            Console.WriteLine($"Token from session: {(string.IsNullOrEmpty(token) ? "NULL/EMPTY" : "EXISTS")}");
+            Console.WriteLine($"Token length: {token?.Length ?? 0}");
+            
             if (!string.IsNullOrEmpty(token))
             {
+                // Clear any existing authorization header first
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+                // Set the new one
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                Console.WriteLine($"Authorization header set successfully");
+            }
+            else
+            {
+                Console.WriteLine($"No token found - not setting auth header");
             }
         }
 
@@ -47,30 +59,54 @@ namespace RichKid.Web.Services
         {
             try
             {
-                AddAuthHeader(); // make sure we're authenticated
+                Console.WriteLine($"=== UserService.GetAllUsersAsync START ===");
+                Console.WriteLine($"Base URL: {_baseUrl}");
                 
+                AddAuthHeader();
+                
+                Console.WriteLine($"Making GET request to: {_baseUrl}/users");
                 var response = await _httpClient.GetAsync($"{_baseUrl}/users");
                 
-                // check if user session expired
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                Console.WriteLine($"Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
+                
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
+                    Console.WriteLine($"Unauthorized response - session may have expired");
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
                 
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Response JSON length: {json?.Length ?? 0}");
+                Console.WriteLine($"Response JSON (first 200 chars): {(string.IsNullOrEmpty(json) ? "EMPTY" : json.Substring(0, Math.Min(200, json.Length)))}");
+                
+                if (string.IsNullOrEmpty(json))
+                {
+                    Console.WriteLine($"Empty JSON response - returning empty list");
+                    return new List<User>();
+                }
+                
                 var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
                 { 
-                    PropertyNameCaseInsensitive = true // handle API response casing differences
+                    PropertyNameCaseInsensitive = true 
                 });
                 
-                return users ?? new List<User>(); // return empty list if null
+                Console.WriteLine($"Deserialized {users?.Count ?? 0} users");
+                Console.WriteLine($"=== UserService.GetAllUsersAsync END ===");
+                
+                return users ?? new List<User>();
             }
             catch (HttpRequestException ex)
             {
-                // wrap in more descriptive exception
+                Console.WriteLine($"HttpRequestException: {ex.Message}");
                 throw new Exception($"Error fetching users: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Exception: {ex.GetType().Name} - {ex.Message}");
+                throw;
             }
         }
 
@@ -78,22 +114,69 @@ namespace RichKid.Web.Services
         {
             try
             {
-                AddAuthHeader(); // need auth for POST operations
+                AddAuthHeader();
                 
                 var json = JsonSerializer.Serialize(user);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
+                Console.WriteLine($"=== UserService.AddUserAsync ===");
+                Console.WriteLine($"Sending request to: {_baseUrl}/users");
+                Console.WriteLine($"Request JSON: {json}");
+                
                 var response = await _httpClient.PostAsync($"{_baseUrl}/users", content);
+                
+                Console.WriteLine($"Response Status: {response.StatusCode}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
                 
-                response.EnsureSuccessStatusCode(); // will throw if not 2xx
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Read the error response body to get the actual error message
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error response content: {errorContent}");
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        // Try to parse the error message from the API response
+                        if (!string.IsNullOrEmpty(errorContent))
+                        {
+                            // Clean up the error message - remove quotes if it's a JSON string
+                            var cleanError = errorContent.Trim('"');
+                            
+                            // The API now returns clean error messages
+                            if (cleanError.Contains("Username already exists"))
+                            {
+                                throw new HttpRequestException("Username already exists in the system");
+                            }
+                            else
+                            {
+                                // Use the clean error message directly
+                                throw new HttpRequestException(cleanError);
+                            }
+                        }
+                        else
+                        {
+                            throw new HttpRequestException("The server could not process the request");
+                        }
+                    }
+                    
+                    // For other HTTP error codes
+                    throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {errorContent}");
+                }
+                
+                Console.WriteLine("User added successfully");
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException)
             {
+                // Re-throw HttpRequestException as-is (these contain our custom messages)
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Exception in AddUserAsync: {ex.GetType().Name} - {ex.Message}");
                 throw new Exception($"Error adding user: {ex.Message}", ex);
             }
         }
@@ -102,7 +185,7 @@ namespace RichKid.Web.Services
         {
             try
             {
-                AddAuthHeader(); // auth required for deletion
+                AddAuthHeader();
                 
                 var response = await _httpClient.DeleteAsync($"{_baseUrl}/users/{id}");
                 
@@ -123,23 +206,64 @@ namespace RichKid.Web.Services
         {
             try
             {
-                AddAuthHeader(); // auth needed for updates
+                AddAuthHeader();
                 
                 var json = JsonSerializer.Serialize(updatedUser);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                // use the user's ID in the URL path
+                Console.WriteLine($"=== UserService.UpdateUserAsync ===");
+                Console.WriteLine($"Sending request to: {_baseUrl}/users/{updatedUser.UserID}");
+                
                 var response = await _httpClient.PutAsync($"{_baseUrl}/users/{updatedUser.UserID}", content);
+                
+                Console.WriteLine($"Response Status: {response.StatusCode}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     throw new UnauthorizedAccessException("Session expired. Please login again.");
                 }
                 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Read the error response body to get the actual error message
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error response content: {errorContent}");
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        if (!string.IsNullOrEmpty(errorContent))
+                        {
+                            // Clean up the error message - remove quotes if it's a JSON string
+                            var cleanError = errorContent.Trim('"');
+                            
+                            if (cleanError.Contains("Username already exists"))
+                            {
+                                throw new HttpRequestException("Username already exists in the system");
+                            }
+                            else
+                            {
+                                throw new HttpRequestException(cleanError);
+                            }
+                        }
+                        else
+                        {
+                            throw new HttpRequestException("The server could not process the request");
+                        }
+                    }
+                    
+                    throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {errorContent}");
+                }
+                
+                Console.WriteLine("User updated successfully");
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException)
             {
+                // Re-throw HttpRequestException as-is
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Exception in UpdateUserAsync: {ex.GetType().Name} - {ex.Message}");
                 throw new Exception($"Error updating user: {ex.Message}", ex);
             }
         }
@@ -152,7 +276,6 @@ namespace RichKid.Web.Services
                 
                 var response = await _httpClient.GetAsync($"{_baseUrl}/users/{id}");
                 
-                // return null if user not found
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
                 
@@ -164,6 +287,10 @@ namespace RichKid.Web.Services
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrEmpty(json))
+                    return null;
+                
                 var user = JsonSerializer.Deserialize<User>(json, new JsonSerializerOptions 
                 { 
                     PropertyNameCaseInsensitive = true 
@@ -183,7 +310,6 @@ namespace RichKid.Web.Services
             {
                 AddAuthHeader();
                 
-                // URL encode the search parameters to handle special characters
                 var response = await _httpClient.GetAsync($"{_baseUrl}/users/search?firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
@@ -194,12 +320,18 @@ namespace RichKid.Web.Services
                 response.EnsureSuccessStatusCode();
                 
                 var json = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrEmpty(json))
+                {
+                    return new List<User>();
+                }
+                
                 var users = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions 
                 { 
                     PropertyNameCaseInsensitive = true 
                 });
                 
-                return users ?? new List<User>(); // fallback to empty list
+                return users ?? new List<User>();
             }
             catch (HttpRequestException ex)
             {

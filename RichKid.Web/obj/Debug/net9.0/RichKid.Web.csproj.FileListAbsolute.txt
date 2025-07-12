@@ -112,3 +112,5 @@ C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\RichKid.Shared.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Web\bin\Debug\net9.0\RichKid.Shared.pdb

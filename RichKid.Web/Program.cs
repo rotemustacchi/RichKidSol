@@ -1,4 +1,5 @@
 using RichKid.Web.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,18 +7,30 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);      // Session expires after 30 minutes of inactivity
-    options.Cookie.HttpOnly = true;                      // Prevent client-side JavaScript access to session cookie
-    options.Cookie.IsEssential = true;                   // Required for GDPR compliance
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
 });
 
-// 2. Add IHttpContextAccessor (required for @inject in Razor pages)
+// 2. Add Cookie Authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.LogoutPath = "/Auth/Logout";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+    });
+
+// 3. Add IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
-// 3. Add MVC services
+// 4. Add MVC services
 builder.Services.AddControllersWithViews();
 
-// 4. Register HttpClient for API communication
+// 5. Register HttpClient for API communication
 builder.Services.AddHttpClient<IUserService, UserService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -28,13 +41,12 @@ builder.Services.AddHttpClient<IUserService, UserService>(client =>
     var handler = new HttpClientHandler();
     if (builder.Environment.IsDevelopment())
     {
-        // Ignore SSL certificate errors in development
         handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
     }
     return handler;
 });
 
-// 5. Register HttpClient for Auth service
+// 6. Register HttpClient for Auth service
 builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -45,13 +57,12 @@ builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
     var handler = new HttpClientHandler();
     if (builder.Environment.IsDevelopment())
     {
-        // Ignore SSL certificate errors in development
         handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
     }
     return handler;
 });
 
-// 6. Register services with dependency injection
+// 7. Register services with dependency injection
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -60,25 +71,22 @@ var app = builder.Build();
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");              // Handle exceptions in production
-    app.UseHsts();                                       // HTTP Strict Transport Security
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
-app.UseHttpsRedirection();                               // Redirect HTTP to HTTPS
-app.UseStaticFiles();                                    // Serve static files (CSS, JS, images)
-
-// Important: UseRouting must come before Session/Authorization
+app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
-// 7. Enable Session middleware
+// 8. Add Authentication and Authorization middleware
+app.UseAuthentication();
 app.UseSession();
-
-// 8. Enable Authorization middleware
 app.UseAuthorization();
 
 // 9. Configure default route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Auth}/{action=Login}/{id?}");  // Default to Auth controller, Login action
+    pattern: "{controller=Auth}/{action=Login}/{id?}");
 
 app.Run();

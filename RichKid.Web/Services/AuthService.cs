@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using RichKid.Shared.DTOs;
 
 namespace RichKid.Web.Services
 {
@@ -26,7 +27,7 @@ namespace RichKid.Web.Services
         public AuthService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
-            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api"; // fallback to localhost if config missing
+            _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5270/api";
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -34,34 +35,61 @@ namespace RichKid.Web.Services
         {
             try
             {
-                // create the login payload
-                var loginModel = new { UserName = username, Password = password };
-                var json = JsonSerializer.Serialize(loginModel);
+                // create the login payload using shared DTO
+                var loginRequest = new LoginRequest { UserName = username, Password = password };
+                var json = JsonSerializer.Serialize(loginRequest);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+                Console.WriteLine($"=== AuthService.LoginAsync ===");
+                Console.WriteLine($"Sending login request to: {_baseUrl}/auth/login");
+                Console.WriteLine($"Username: {username}");
+
                 var response = await _httpClient.PostAsync($"{_baseUrl}/auth/login", content);
+
+                Console.WriteLine($"Response Status: {response.StatusCode}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(responseContent, new JsonSerializerOptions 
+                    var tokenResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent, new JsonSerializerOptions 
                     { 
-                        PropertyNameCaseInsensitive = true // handle different casing from API
+                        PropertyNameCaseInsensitive = true
                     });
 
                     if (tokenResponse?.Token != null)
                     {
-                        SetAuthToken(tokenResponse.Token); // store the token for future requests
+                        SetAuthToken(tokenResponse.Token);
+                        Console.WriteLine("Login successful");
                         return new AuthResult { Success = true, Token = tokenResponse.Token };
                     }
                 }
 
-                // if we get here, login failed
-                return new AuthResult { Success = false, ErrorMessage = "Invalid credentials" };
+                // Handle different error responses
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    // Read the error message from the API response
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Login failed - Unauthorized: {errorContent}");
+                    
+                    // Clean up the error message (remove quotes if it's a JSON string)
+                    var cleanError = errorContent.Trim('"');
+                    
+                    return new AuthResult { Success = false, ErrorMessage = cleanError };
+                }
+
+                // For other error codes
+                var generalError = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Login failed - {response.StatusCode}: {generalError}");
+                return new AuthResult { Success = false, ErrorMessage = "Login failed" };
             }
             catch (HttpRequestException ex)
             {
-                // network issues, server down, etc.
+                Console.WriteLine($"HttpRequestException during login: {ex.Message}");
+                return new AuthResult { Success = false, ErrorMessage = $"Connection error: {ex.Message}" };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General exception during login: {ex.Message}");
                 return new AuthResult { Success = false, ErrorMessage = $"Login failed: {ex.Message}" };
             }
         }
@@ -91,19 +119,7 @@ namespace RichKid.Web.Services
         public bool IsAuthenticated()
         {
             var token = GetCurrentToken();
-            return !string.IsNullOrEmpty(token); // simple check - could be enhanced with expiry validation
+            return !string.IsNullOrEmpty(token);
         }
-    }
-
-    public class AuthResult
-    {
-        public bool Success { get; set; }
-        public string? Token { get; set; }
-        public string? ErrorMessage { get; set; }
-    }
-
-    public class TokenResponse
-    {
-        public string Token { get; set; } = string.Empty;
     }
 }

@@ -1,123 +1,134 @@
-# RichKid – מערכת ניהול משתמשים (Fullstack ASP.NET Core 9)
+# RichKid User Management System
 
-## 🧠 תיאור
-RichKid היא מערכת ניהול משתמשים מלאה, הכוללת:
+A full-stack .NET application for user management with JWT-based authentication and role-based access control, featuring a RESTful Web API backend, MVC frontend, and shared library architecture.
 
-- ממשק ניהול Web (ASP.NET MVC)
-- API מאובטח (ASP.NET Web API + JWT)
-- שמירת נתונים בקובץ JSON משותף
-- תמיכה מלאה בפעולות CRUD
-- סינון, חיפוש ואימות נתונים (Validation)
+## 🏗️ Architecture
+
+The solution consists of three main projects:
+
+- **RichKid.API** - RESTful Web API backend with JWT authentication
+- **RichKid.Web** - MVC frontend application
+- **RichKid.Shared** - Shared library containing models, DTOs, and service interfaces
+
+## ✨ Features
+
+### Authentication & Authorization
+- **JWT-based authentication** with detailed error messages
+- **Policy-based authorization** using JWT claims
+- **Role-based access control** with 4 user groups:
+  - **מנהל (Admin)** - Group 1: Full system access (Create, Edit, Delete, View)
+  - **עורך (Editor)** - Group 2: Can create and edit users (Create, Edit, View)
+  - **משתמש רגיל (Regular User)** - Group 3: Can edit own profile (Edit Own, View)
+  - **צפייה בלבד (View Only)** - Group 4: Read-only access (View Only)
+
+### User Management
+- Create, read, update, delete users
+- User search and filtering by name, email, or phone
+- Active/inactive status management
+- Comprehensive user data including contact information
+- **User-friendly validation** with English error messages
+- **Simple password requirements** (minimum 4 characters)
+
+### Security Features
+- **JWT token-based authentication** with role claims
+- **Cookie authentication** for web sessions
+- **Detailed error handling** with specific login failure messages
+- **Session management** with automatic timeout
+- **CORS protection** configured for web domain
+- **Input validation** with clean error messages
+
+## 🚀 Getting Started
+
+### Prerequisites
+- .NET 9.0 or later
+- Visual Studio 2022 or VS Code
+- Git
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd RichKidSol
+   ```
+
+2. **Restore dependencies**
+   ```bash
+   dotnet restore
+   ```
+
+3. **Build the solution**
+   ```bash
+   dotnet build
+   ```
+
+4. **Run the applications**
+
+   **Start the API (Terminal 1):**
+   ```bash
+   cd RichKid.API
+   dotnet run
+   ```
+   API will run on `http://localhost:5270`
+
+   **Start the Web app (Terminal 2):**
+   ```bash
+   cd RichKid.Web
+   dotnet run
+   ```
+   Web app will run on `https://localhost:7143`
+
+5. **Access the application**
+   - Open your browser and navigate to `https://localhost:7143`
+   - Use the test credentials below
+
+## 🔐 Test Users
+
+The system comes with pre-configured test users in `Users.json`:
+
+| Username | Password | Group | Role | Status |
+|----------|----------|-------|------|--------|
+| Rotem | 1234 | 1 | Admin | Active ✅ |
+| DanielaDanon | ab!44 | 2 | Editor | Active ✅ |
+| Alon | 1111 | 3 | Regular User | Active ✅ |
+| Tuval | 1234 | 3 | Regular User | Active ✅ |
+| CharliBrown | 33333333 | 4 | View Only | Inactive ❌ |
+
+### Login Error Messages:
+- **Invalid username**: "Username not found"
+- **Wrong password**: "Incorrect password"
+- **Inactive account**: "Account is inactive. Please contact an administrator"
+
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login with detailed error responses
+
+### Users (JWT Protected)
+- `GET /api/users` - Get all users (Requires: CanView)
+- `GET /api/users/{id}` - Get user by ID (Requires: CanView)
+- `GET /api/users/search` - Search users by name (Requires: CanView)
+- `POST /api/users` - Create new user (Requires: CanCreate)
+- `PUT /api/users/{id}` - Update user (Requires: CanEdit or self-edit)
+- `DELETE /api/users/{id}` - Delete user (Requires: CanDelete)
+
+## 🛡️ Authorization Matrix
+
+| Action | Admin (1) | Editor (2) | Regular (3) | View Only (4) |
+|--------|-----------|------------|-------------|---------------|
+| View Users | ✅ | ✅ | ✅ | ✅ |
+| Create User | ✅ | ✅ | ❌ | ❌ |
+| Edit Any User | ✅ | ✅ | ❌ | ❌ |
+| Edit Own Profile | ✅ | ✅ | ✅ | ✅ |
+| Delete User | ✅ | ❌ | ❌ | ❌ |
+
+## 🔍 API Documentation
+
+When running in development mode, Swagger UI is available at:
+`http://localhost:5270/swagger`
+
+The Swagger UI includes JWT Bearer token authentication support.
 
 ---
 
-## 🛠️ טכנולוגיות
-
-- ASP.NET Core 9.0
-- MVC + Web API
-- JSON כ־Data Store
-- JWT Authentication
-- Visual Studio Code / .NET CLI
-
----
-
-## ▶️ הוראות הרצה
-
-### 0️⃣ דרישות מקדימות
-
-- מותקן [.NET 9 SDK](https://dotnet.microsoft.com/)
-- Visual Studio Code (מומלץ)
-- Git (אם ברצונך לשכפל)
-
----
-
-### 1️⃣ פתיחת הפרויקט
-
-- פתח את התיקייה `RichKidSol` ב־Visual Studio Code
-
----
-
-### 2️⃣ Build ראשוני
-
-אפשר להריץ:
-```bash
-dotnet build RichKidSol.sln
-```
-
----
-
-### 3️⃣ הרצת שני הפרויקטים (Web + API)
-
-- עבור ללשונית `Run and Debug` ב־VS Code
-- בחר קונפיגורציה: `Start Web + API`
-- לחץ ▶️ והמערכת תעלה
-
----
-
-## 🌐 שימוש במערכת
-
-### 🖥️ RichKid.Web – ממשק ניהול
-
-- כתובת: `https://localhost:7143/User`
-
-כולל:
-- טבלת משתמשים עם חיפוש + סינון סטטוס
-- הוספה, עריכה, מחיקה עם ולידציות
-- ניהול הרשאות לפי קבוצת משתמש
-- התחברות + התנתקות (Session)
-
----
-
-### 🔐 RichKid.API – Web API עם JWT
-
-- כתובת בסיס: `https://localhost:7045`
-
-#### 🔑 התחברות:
-```http
-POST /api/auth/login
-```
-Body:
-```json
-{
-  "userName": "admin",
-  "password": "admin123"
-}
-```
-תחזיר טוקן מסוג JWT.
-
-#### 🧪 שימוש עם הטוקן (Swagger או Postman)
-
-- עבור כל Endpoint מוגן – השתמש ב־`Authorize` והדבק את הטוקן עם `Bearer <token>`
-
----
-
-### 📡 Endpoints עיקריים:
-
-| Method | Endpoint                                   | תיאור |
-|--------|--------------------------------------------|--------|
-| POST   | `/api/auth/login`                          | התחברות וקבלת טוקן |
-| GET    | `/api/users`                               | כל המשתמשים |
-| GET    | `/api/users/{id}`                          | לפי מזהה |
-| GET    | `/api/users/search?firstName=X&lastName=Y` | חיפוש לפי שם |
-| POST   | `/api/users`                               | יצירת משתמש |
-| PUT    | `/api/users/{id}`                          | עדכון משתמש |
-| DELETE | `/api/users/{id}`                          | מחיקת משתמש |
-
----
-
-## 📁 נתונים
-
-- כל נתוני המשתמשים נשמרים בקובץ `Users.json` (רלוונטי גם ל־API וגם ל־Web)
-
----
-
-## 🧪 לבדיקה מהירה
-
-- הרץ את המערכת
-- התחבר עם משתמש קיים ב־Web
-- התחבר עם JWT דרך Swagger (`/api/auth/login`)
-- נסה קריאות API עם הטוקן
-
----
-
-בהצלחה! 🚀
+For questions or support, please check the code documentation or create an issue in the repository.

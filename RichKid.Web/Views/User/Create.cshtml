@@ -1,6 +1,14 @@
-@model RichKid.Web.Models.User
+@model RichKid.Shared.Models.User
 
 <h2>יצירת משתמש חדש</h2>
+
+@* Add this validation summary to display general errors *@
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+    </div>
+}
 
 <form asp-action="Create" method="post">
     <div class="form-group">

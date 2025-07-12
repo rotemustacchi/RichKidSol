@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RichKid.Shared.Models;
 using RichKid.Shared.Services;
+using System.Security.Claims;
 
 namespace RichKid.API.Controllers
 {
@@ -12,27 +13,29 @@ namespace RichKid.API.Controllers
     {
         private readonly IUserService _userService;
 
-        // Constructor with dependency injection
         public UsersController(IUserService userService)
         {
             _userService = userService;
         }
 
-        // GET /api/users
+        // GET /api/users - All authenticated users can view
         [HttpGet]
+        [Authorize(Policy = "CanView")]
         public ActionResult<List<User>> GetAll() =>
             _userService.GetAllUsers();
 
         // GET /api/users/{id}
         [HttpGet("{id}")]
+        [Authorize(Policy = "CanView")]
         public ActionResult<User> GetById(int id)
         {
             var user = _userService.GetUserById(id);
-            return user == null ? NotFound() : Ok(user);
+            return user == null ? NotFound("User not found") : Ok(user);
         }
 
         // GET /api/users/search?firstName=X&lastName=Y
         [HttpGet("search")]
+        [Authorize(Policy = "CanView")]
         public ActionResult<List<User>> Search(
             [FromQuery] string firstName,
             [FromQuery] string lastName)
@@ -41,10 +44,22 @@ namespace RichKid.API.Controllers
             return Ok(results);
         }
 
-        // POST /api/users
+        // POST /api/users - Only admins and editors can create
         [HttpPost]
+        [Authorize(Policy = "CanCreate")]
         public IActionResult Create([FromBody] User user)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .SelectMany(x => x.Value.Errors)
+                    .Select(x => x.ErrorMessage)
+                    .ToList();
+                
+                return BadRequest(string.Join(". ", errors));
+            }
+
             try
             {
                 _userService.AddUser(user);
@@ -53,17 +68,41 @@ namespace RichKid.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                if (ex.Message.Contains("Username already exists"))
+                {
+                    return BadRequest("Username already exists in the system");
+                }
+                return BadRequest($"Error creating user: {ex.Message}");
             }
         }
 
-        // PUT /api/users/{id}
+        // PUT /api/users/{id} - Admins/editors can edit anyone, users can edit themselves
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] User user)
         {
-            // Validate that route ID matches user ID
             if (id != user.UserID)
-                return BadRequest("Route ID does not match user ID");
+                return BadRequest("User ID mismatch");
+
+            // Check permissions
+            var currentUserId = User.FindFirst("UserID")?.Value;
+            var canEdit = User.HasClaim("CanEdit", "true");
+            var canEditSelf = User.HasClaim("CanEdit", "self") && currentUserId == id.ToString();
+
+            if (!canEdit && !canEditSelf)
+            {
+                return Forbid("You don't have permission to edit this user");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .SelectMany(x => x.Value.Errors)
+                    .Select(x => x.ErrorMessage)
+                    .ToList();
+                
+                return BadRequest(string.Join(". ", errors));
+            }
 
             try
             {
@@ -72,21 +111,32 @@ namespace RichKid.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                if (ex.Message.Contains("Username already exists"))
+                {
+                    return BadRequest("Username already exists in the system");
+                }
+                return BadRequest($"Error updating user: {ex.Message}");
             }
         }
 
-        // DELETE /api/users/{id}
+        // DELETE /api/users/{id} - Only admins can delete
         [HttpDelete("{id}")]
+        [Authorize(Policy = "CanDelete")]
         public IActionResult Delete(int id)
         {
-            // Check if user exists before deletion
             var existing = _userService.GetUserById(id);
             if (existing == null)
-                return NotFound();
+                return NotFound("User not found");
 
-            _userService.DeleteUser(id);
-            return NoContent();
+            try
+            {
+                _userService.DeleteUser(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error deleting user: {ex.Message}");
+            }
         }
     }
 }

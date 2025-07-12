@@ -3,15 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using RichKid.Shared.Models;
+using RichKid.Shared.Services;
 
-namespace RichKid.Shared.Services
+namespace RichKid.API.Services
 {
-    public interface IDataService
-    {
-        List<User> LoadUsers();
-        void SaveUsers(List<User> users);
-    }
-
     public class DataService : IDataService
     {
         private readonly string _filePath;

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using RichKid.Shared.Models;
 using RichKid.Shared.Services;
+using RichKid.Shared.DTOs;
 
 namespace RichKid.API.Controllers
 {
@@ -18,7 +19,6 @@ namespace RichKid.API.Controllers
         private readonly IConfiguration _config;
         private readonly IUserService _userService;
 
-        // Constructor with dependency injection
         public AuthController(IConfiguration config, IUserService userService)
         {
             _config = config;
@@ -26,31 +26,82 @@ namespace RichKid.API.Controllers
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginModel body)
+        public IActionResult Login([FromBody] LoginRequest request)
         {
-            // Find user with matching credentials and active status
-            var user = _userService.GetAllUsers()
-                .FirstOrDefault(u =>
-                    u.UserName == body.UserName &&
-                    u.Password == body.Password &&
-                    u.Active);
-            
-            if (user == null)
-                return Unauthorized("Username/password are incorrect or user is not active.");
+            // First, check if user exists by username
+            var userByUsername = _userService.GetAllUsers()
+                .FirstOrDefault(u => u.UserName == request.UserName);
 
-            // Create JWT token
+            if (userByUsername == null)
+            {
+                return Unauthorized("Username not found");
+            }
+
+            // Check if password matches
+            if (userByUsername.Password != request.Password)
+            {
+                return Unauthorized("Incorrect password");
+            }
+
+            // Check if user is active
+            if (!userByUsername.Active)
+            {
+                return Unauthorized("Account is inactive. Please contact an administrator");
+            }
+
+            // User is valid and active, create JWT token
             var jwt = _config.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.Now.AddMinutes(int.Parse(jwt["DurationInMinutes"]!));
 
-            // Create claims for the token
-            var claims = new[]
+            // Create claims for the token including role-based claims
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-                new Claim("UserID", user.UserID.ToString()),
-                new Claim("UserGroupID", (user.UserGroupID ?? 0).ToString())
+                new Claim(JwtRegisteredClaimNames.Sub, userByUsername.UserName),
+                new Claim("UserID", userByUsername.UserID.ToString()),
+                new Claim("UserGroupID", (userByUsername.UserGroupID ?? 0).ToString())
             };
+
+            // Add role-based claims for authorization using shared constants
+            switch (userByUsername.UserGroupID)
+            {
+                case UserGroups.ADMIN:
+                    claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+                    claims.Add(new Claim("CanCreate", "true"));
+                    claims.Add(new Claim("CanEdit", "true"));
+                    claims.Add(new Claim("CanDelete", "true"));
+                    claims.Add(new Claim("CanView", "true"));
+                    break;
+                case UserGroups.EDITOR:
+                    claims.Add(new Claim(ClaimTypes.Role, "Editor"));
+                    claims.Add(new Claim("CanCreate", "true"));
+                    claims.Add(new Claim("CanEdit", "true"));
+                    claims.Add(new Claim("CanDelete", "false"));
+                    claims.Add(new Claim("CanView", "true"));
+                    break;
+                case UserGroups.REGULAR_USER:
+                    claims.Add(new Claim(ClaimTypes.Role, "User"));
+                    claims.Add(new Claim("CanCreate", "false"));
+                    claims.Add(new Claim("CanEdit", "self"));
+                    claims.Add(new Claim("CanDelete", "false"));
+                    claims.Add(new Claim("CanView", "true"));
+                    break;
+                case UserGroups.VIEW_ONLY:
+                    claims.Add(new Claim(ClaimTypes.Role, "Viewer"));
+                    claims.Add(new Claim("CanCreate", "false"));
+                    claims.Add(new Claim("CanEdit", "self"));
+                    claims.Add(new Claim("CanDelete", "false"));
+                    claims.Add(new Claim("CanView", "true"));
+                    break;
+                default:
+                    claims.Add(new Claim(ClaimTypes.Role, "Unassigned"));
+                    claims.Add(new Claim("CanCreate", "false"));
+                    claims.Add(new Claim("CanEdit", "false"));
+                    claims.Add(new Claim("CanDelete", "false"));
+                    claims.Add(new Claim("CanView", "false"));
+                    break;
+            }
 
             // Generate the token
             var token = new JwtSecurityToken(
@@ -61,13 +112,12 @@ namespace RichKid.API.Controllers
                 signingCredentials: creds
             );
 
-            return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
-        }
-    }
+            var response = new LoginResponse
+            {
+                Token = new JwtSecurityTokenHandler().WriteToken(token)
+            };
 
-    public class LoginModel
-    {
-        public string UserName { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+            return Ok(response);
+        }
     }
 }

@@ -2,19 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using RichKid.Shared.Models;
+using RichKid.Shared.Services;
 
-namespace RichKid.Shared.Services
+namespace RichKid.API.Services
 {
-    public interface IUserService
-    {
-        List<User> GetAllUsers();
-        void AddUser(User user);
-        void DeleteUser(int id);
-        void UpdateUser(User updatedUser);
-        User? GetUserById(int id);
-        List<User> SearchByFullName(string first, string last);
-    }
-
     public class UserService : IUserService
     {
         private readonly IDataService _dataService;
@@ -44,7 +35,7 @@ namespace RichKid.Shared.Services
             if (user.Data == null)
                 user.Data = new UserData();
 
-            // Set creation date
+            // Set creation date as string in YYYY-MM-DD format
             user.Data.CreationDate = DateTime.Now.ToString("yyyy-MM-dd");
             
             // Add user and save

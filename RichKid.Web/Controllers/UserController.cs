@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using RichKid.Web.Models;
+using RichKid.Shared.Models;
 using RichKid.Web.Services;
 using RichKid.Web.Filters;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RichKid.Web.Controllers
 {
+    [Authorize] // Require authentication for all actions
     public class UserController : Controller
     {
         private readonly IUserService _userService;
 
-        // Use dependency injection instead of manual instantiation
         public UserController(IUserService userService)
         {
             _userService = userService;
         }
 
-        // Only groups 1,2,3,4 (all active users) are authorized to view
-        [GroupAuthorize(1, 2, 3, 4)]
+        // All authenticated users can view the user list
+        [RequireViewPermission]
         public async Task<IActionResult> Index(string search = "", string status = "")
         {
             try
@@ -43,11 +44,12 @@ namespace RichKid.Web.Controllers
             }
         }
 
-        // Only admins (1) and editors (2) are authorized to create
-        [GroupAuthorize(1, 2)]
+        // Only admins and editors can create users
+        [RequireCreatePermission]
         public IActionResult Create() => View();
 
-        [HttpPost, GroupAuthorize(1, 2)]
+        [HttpPost]
+        [RequireCreatePermission]
         public async Task<IActionResult> Create(User user)
         {
             if (user.Data == null) user.Data = new UserData();
@@ -57,27 +59,55 @@ namespace RichKid.Web.Controllers
                 try
                 {
                     await _userService.AddUserAsync(user);
+                    TempData["SuccessMessage"] = "User created successfully!";
                     return RedirectToAction("Index");
+                }
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine($"HttpRequestException in Create: {ex.Message}");
+                    
+                    // Check for specific error messages
+                    if (ex.Message.Contains("Username already exists"))
+                    {
+                        ModelState.AddModelError("UserName", "Username already exists. Please choose a different username.");
+                    }
+                    else
+                    {
+                        // Use the clean error message from the API
+                        ModelState.AddModelError("", ex.Message);
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // User's session expired
+                    return RedirectToAction("Login", "Auth");
                 }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError("", ex.Message);
+                    Console.WriteLine($"General Exception in Create: {ex.GetType().Name} - {ex.Message}");
+                    ModelState.AddModelError("", $"Unexpected error: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Log validation errors for debugging
+                Console.WriteLine("ModelState is invalid:");
+                foreach (var modelError in ModelState)
+                {
+                    foreach (var error in modelError.Value.Errors)
+                    {
+                        Console.WriteLine($"  {modelError.Key}: {error.ErrorMessage}");
+                    }
                 }
             }
 
             return View(user);
         }
 
-        [GroupAuthorize(1, 2, 3, 4)]
+        // Users can edit themselves, admins and editors can edit anyone
+        [RequireEditPermission(allowSelfEdit: true)]
         public async Task<IActionResult> Edit(int id)
         {
-            int group = HttpContext.Session.GetInt32("UserGroupID") ?? 0;
-            int? me = HttpContext.Session.GetInt32("UserID");
-
-            // If I'm a regular user/viewer, only allowed to edit myself
-            if ((group == 3 || group == 4) && me != id)
-                return Forbid();
-
             try
             {
                 var user = await _userService.GetUserByIdAsync(id);
@@ -90,15 +120,10 @@ namespace RichKid.Web.Controllers
             }
         }
 
-        [HttpPost, GroupAuthorize(1, 2, 3, 4)]
+        [HttpPost]
+        [RequireEditPermission(allowSelfEdit: true)]
         public async Task<IActionResult> Edit(User user)
         {
-            int group = HttpContext.Session.GetInt32("UserGroupID") ?? 0;
-            int? me = HttpContext.Session.GetInt32("UserID");
-
-            if ((group == 3 || group == 4) && me != user.UserID)
-                return Forbid();
-
             if (user.Data == null)
                 user.Data = new UserData();
 
@@ -107,18 +132,53 @@ namespace RichKid.Web.Controllers
                 try
                 {
                     await _userService.UpdateUserAsync(user);
+                    TempData["SuccessMessage"] = "User updated successfully!";
                     return RedirectToAction("Index");
+                }
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine($"HttpRequestException in Edit: {ex.Message}");
+                    
+                    // Check for specific error messages
+                    if (ex.Message.Contains("Username already exists"))
+                    {
+                        ModelState.AddModelError("UserName", "Username already exists. Please choose a different username.");
+                    }
+                    else
+                    {
+                        // Use the clean error message from the API
+                        ModelState.AddModelError("", ex.Message);
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // User's session expired
+                    return RedirectToAction("Login", "Auth");
                 }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError("", ex.Message);
+                    Console.WriteLine($"General Exception in Edit: {ex.GetType().Name} - {ex.Message}");
+                    ModelState.AddModelError("", $"Unexpected error: {ex.Message}");
                 }
             }
+            else
+            {
+                // Log validation errors for debugging
+                Console.WriteLine("ModelState is invalid in Edit:");
+                foreach (var modelError in ModelState)
+                {
+                    foreach (var error in modelError.Value.Errors)
+                    {
+                        Console.WriteLine($"  {modelError.Key}: {error.ErrorMessage}");
+                    }
+                }
+            }
+            
             return View(user);
         }
 
-        // Only admins (1) are authorized to delete
-        [GroupAuthorize(1)]
+        // Only admins can delete users
+        [RequireDeletePermission]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -133,17 +193,19 @@ namespace RichKid.Web.Controllers
             }
         }
 
-        [HttpPost, GroupAuthorize(1)]
+        [HttpPost]
+        [RequireDeletePermission]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try
             {
                 await _userService.DeleteUserAsync(id);
+                TempData["SuccessMessage"] = "User deleted successfully!";
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                ViewBag.Error = $"Error deleting user: {ex.Message}";
+                TempData["ErrorMessage"] = $"Error deleting user: {ex.Message}";
                 return RedirectToAction("Index");
             }
         }

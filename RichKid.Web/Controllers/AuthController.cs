@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using RichKid.Web.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace RichKid.Web.Controllers
 {
@@ -39,7 +41,21 @@ namespace RichKid.Web.Controllers
                     var handler = new JwtSecurityTokenHandler();
                     var jsonToken = handler.ReadJwtToken(result.Token);
                     
-                    // Extract user information from token claims
+                    // Create claims identity for the user
+                    var claims = new List<Claim>();
+                    
+                    foreach (var claim in jsonToken.Claims)
+                    {
+                        claims.Add(new Claim(claim.Type, claim.Value));
+                    }
+                    
+                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+                    
+                    // Sign in the user with the claims
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+                    
+                    // Also store in session for backward compatibility
                     var userIdClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "UserID");
                     var userGroupIdClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "UserGroupID");
                     
@@ -57,13 +73,14 @@ namespace RichKid.Web.Controllers
                 }
                 else
                 {
-                    ViewBag.Error = result.ErrorMessage ?? "wrong username or password.";
+                    // Display the specific error message from the API
+                    ViewBag.Error = result.ErrorMessage ?? "Login failed";
                     return View();
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                ViewBag.Error = "wrong username or password.";
+                ViewBag.Error = "Authentication failed";
                 return View();
             }
             catch (Exception ex)
@@ -73,10 +90,11 @@ namespace RichKid.Web.Controllers
             }
         }
 
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             _authService.ClearAuthToken();
             HttpContext.Session.Clear();
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login");
         }
     }

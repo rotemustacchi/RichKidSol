@@ -1,4 +1,4 @@
-@model List<RichKid.Web.Models.User>
+@model List<RichKid.Shared.Models.User>
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 @{
@@ -79,7 +79,7 @@ else
                 <td>@user.UserName</td>
                 <td>@user.Data.FirstName</td>
                 <td>@user.Data.LastName</td>
-                <td>@RichKid.Web.Models.UserGroups.GetName(user.UserGroupID)</td>
+                <td>@RichKid.Shared.Models.UserGroups.GetName(user.UserGroupID)</td>
                 <td>@user.Data.Phone</td>
                 <td>@user.Data.Email</td>
                 <td>@(user.Active ? "פעיל" : "לא פעיל")</td>

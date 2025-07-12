@@ -271,6 +271,16 @@
             "related": ".xml"
           }
         }
+      },
+      "RichKid.Shared/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/RichKid.Shared.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/RichKid.Shared.dll": {}
+        }
       }
     }
   },
@@ -729,6 +739,11 @@
         "system.identitymodel.tokens.jwt.8.12.1.nupkg.sha512",
         "system.identitymodel.tokens.jwt.nuspec"
       ]
+    },
+    "RichKid.Shared/1.0.0": {
+      "type": "project",
+      "path": "../RichKid.Shared/RichKid.Shared.csproj",
+      "msbuildProject": "../RichKid.Shared/RichKid.Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -736,6 +751,7 @@
       "Microsoft.EntityFrameworkCore >= 9.0.7",
       "Microsoft.EntityFrameworkCore.Analyzers >= 9.0.7",
       "Microsoft.IdentityModel.Tokens >= 8.12.1",
+      "RichKid.Shared >= 1.0.0",
       "System.IdentityModel.Tokens.Jwt >= 8.12.1"
     ]
   },
@@ -765,7 +781,11 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj": {
+              "projectPath": "C:\\Users\\rotem\\OneDrive\\שולחן העבודה\\RichKidSol\\RichKid.Shared\\RichKid.Shared.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

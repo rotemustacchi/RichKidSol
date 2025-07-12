@@ -1,0 +1,12 @@
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\bin\Debug\net9.0\RichKid.Shared.deps.json
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\bin\Debug\net9.0\RichKid.Shared.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\bin\Debug\net9.0\RichKid.Shared.pdb
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.AssemblyInfoInputs.cache
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.AssemblyInfo.cs
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.csproj.CoreCompileInputs.cache
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.sourcelink.json
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\refint\RichKid.Shared.dll
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\RichKid.Shared.pdb
+C:\Users\rotem\OneDrive\שולחן העבודה\RichKidSol\RichKid.Shared\obj\Debug\net9.0\ref\RichKid.Shared.dll

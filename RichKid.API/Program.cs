@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RichKid.Shared.Services;
+using RichKid.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,8 +26,18 @@ builder.Services
     };
   });
 
-//  Authorization
-builder.Services.AddAuthorization();
+// Authorization with JWT-based policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanView", policy =>
+        policy.RequireClaim("CanView", "true"));
+    
+    options.AddPolicy("CanCreate", policy =>
+        policy.RequireClaim("CanCreate", "true"));
+    
+    options.AddPolicy("CanDelete", policy =>
+        policy.RequireClaim("CanDelete", "true"));
+});
 
 // CORS — Allow only your Web domain
 builder.Services.AddCors(options =>
@@ -42,7 +53,7 @@ builder.Services.AddCors(options =>
 
 // Controllers + Swagger/OpenAPI
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();  // Used for Swagger
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "RichKid.API", Version = "v1" });
@@ -73,6 +84,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Register custom services for dependency injection
+// Use shared interfaces but API implementations
 builder.Services.AddScoped<IDataService, DataService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
@@ -85,7 +97,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "RichKid.API V1");
-        // c.RoutePrefix = "";   // If you want the UI to load on API root ("/")
     });
 }
 else
